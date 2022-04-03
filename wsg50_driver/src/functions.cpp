@@ -64,22 +64,22 @@
 //------------------------------------------------------------------------
 
 float convert(unsigned char *b){
-	float tmp;
-  	unsigned int src = 0;
+    float tmp;
+      unsigned int src = 0;
 
-	/*
-	dbgPrint("b[3]=%x\n", b[3]);
-	dbgPrint("b[2]=%x\n", b[2]);
-	dbgPrint("b[1]=%x\n", b[1]);
-	dbgPrint("b[0]=%x\n", b[0]);
-	*/
+    /*
+    dbgPrint("b[3]=%x\n", b[3]);
+    dbgPrint("b[2]=%x\n", b[2]);
+    dbgPrint("b[1]=%x\n", b[1]);
+    dbgPrint("b[0]=%x\n", b[0]);
+    */
 
-  	src = b[3] * 16777216 + b[2] * 65536 + b[1] * 256 + b[0];
+      src = b[3] * 16777216 + b[2] * 65536 + b[1] * 256 + b[0];
 
-  	memcpy(&tmp, &src, sizeof tmp);
-  	//printf("Converted value: %f \n", tmp);
+      memcpy(&tmp, &src, sizeof tmp);
+      //printf("Converted value: %f \n", tmp);
 
-	return tmp;
+    return tmp;
 }
 
 
@@ -98,37 +98,37 @@ float convert(unsigned char *b){
 
 int homing( void )
 {
-	status_t status;
-	int res;
-	unsigned char payload[1];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[1];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Set flags: Homing direction (0: default, 1: widthitive movement, 2: negative movement).
-	payload[0] = 0x00;
+    // Set flags: Homing direction (0: default, 1: widthitive movement, 2: negative movement).
+    payload[0] = 0x00;
 
-	// Submit command and wait for response. Push result to stack.
-	res = cmd_submit( 0x20, payload, 1, true, &resp, &resp_len );
-	if ( res != 2 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
-		if ( res > 0 ) free( resp );
-		return 0;
-	}
+    // Submit command and wait for response. Push result to stack.
+    res = cmd_submit( 0x20, payload, 1, true, &resp, &resp_len );
+    if ( res != 2 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
+        if ( res > 0 ) free( resp );
+        return 0;
+    }
 
-	//dbgPrint("&resp: %s\n", resp);
-	//dbgPrint("&resp_len: %d\n", resp_len);
+    //dbgPrint("&resp: %s\n", resp);
+    //dbgPrint("&resp_len: %d\n", resp_len);
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	free( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command HOMING not successful: %s\n", status_to_str( status ) );
-		return -1;
-	}
+    // Check response status
+    status = cmd_get_response_status( resp );
+    free( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command HOMING not successful: %s\n", status_to_str( status ) );
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 
@@ -138,19 +138,19 @@ int homing( void )
 int move( float width, float speed, bool stop_on_block, bool ignore_response)
 {
 
-	status_t status;
-	int res;
-	unsigned char payload[9];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[9];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Set flags: Absolute movement (bit 0 is 0), stop on block (bit 1 is 1).
-	payload[0] = 0x00;
-	if (stop_on_block) payload[0] |= 0x02;
+    // Set flags: Absolute movement (bit 0 is 0), stop on block (bit 1 is 1).
+    payload[0] = 0x00;
+    if (stop_on_block) payload[0] |= 0x02;
 
-	// Copy target width and speed
-	memcpy( &payload[1], &width, sizeof( float ) );
-	memcpy( &payload[5], &speed, sizeof( float ) );
+    // Copy target width and speed
+    memcpy( &payload[1], &width, sizeof( float ) );
+    memcpy( &payload[5], &speed, sizeof( float ) );
 
     if (!ignore_response) {
         // Submit command and wait for response. Push result to stack.
@@ -181,19 +181,19 @@ int move( float width, float speed, bool stop_on_block, bool ignore_response)
         }
     }
 
-	return 0;
+    return 0;
 }
 
 
 int stop( bool ignore_response )
 {
-	status_t status;
-	int res;
-	unsigned char payload[1];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[1];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	//payload[0] = 0x00;
+    //payload[0] = 0x00;
 
     if (!ignore_response) {
         // Submit command and wait for response. Push result to stack.
@@ -230,104 +230,104 @@ int stop( bool ignore_response )
 
 int ack_fault( void )
 {
-	status_t status;
-	int res;
-	unsigned char payload[3];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[3];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	payload[0] = 0x61;  //MBJ: Està ben enviat, si es posa alrevés no torna error en terminal però si que es posa roig el LED
-	payload[1] = 0x63;
-	payload[2] = 0x6B;
+    payload[0] = 0x61;  //MBJ: Està ben enviat, si es posa alrevés no torna error en terminal però si que es posa roig el LED
+    payload[1] = 0x63;
+    payload[2] = 0x6B;
 
-	// Submit command and wait for response. Push result to stack.
-	res = cmd_submit( 0x24, payload, 3, true, &resp, &resp_len );
-	if ( res != 2 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
-		if ( res > 0 ) free( resp );
-		return 0;
-	}
+    // Submit command and wait for response. Push result to stack.
+    res = cmd_submit( 0x24, payload, 3, true, &resp, &resp_len );
+    if ( res != 2 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
+        if ( res > 0 ) free( resp );
+        return 0;
+    }
 
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	free( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command ACK not successful: %s\n", status_to_str( status ) );
-		return -1;
-	}
+    // Check response status
+    status = cmd_get_response_status( resp );
+    free( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command ACK not successful: %s\n", status_to_str( status ) );
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 
 int grasp( float objWidth, float speed )
 {
-	status_t status;
-	int res;
-	unsigned char payload[8];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[8];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Copy part width and speed
-	memcpy( &payload[0], &objWidth, sizeof( float ) );
-	memcpy( &payload[4], &speed, sizeof( float ) );
+    // Copy part width and speed
+    memcpy( &payload[0], &objWidth, sizeof( float ) );
+    memcpy( &payload[4], &speed, sizeof( float ) );
 
-	// Submit command and wait for response. Push result to stack.
-	res = cmd_submit( 0x25, payload, 8, true, &resp, &resp_len );
-	if ( res != 2 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
-		if ( res > 0 ) free( resp );
-		return 0;
-	}
+    // Submit command and wait for response. Push result to stack.
+    res = cmd_submit( 0x25, payload, 8, true, &resp, &resp_len );
+    if ( res != 2 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
+        if ( res > 0 ) free( resp );
+        return 0;
+    }
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	free( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command GRASP not successful: %s\n", status_to_str( status ) );
-		return -1;
-	}
+    // Check response status
+    status = cmd_get_response_status( resp );
+    free( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command GRASP not successful: %s\n", status_to_str( status ) );
+        return -1;
+    }
 
-	return( 0 );
+    return( 0 );
 }
 
 
 int release( float width, float speed )
 {
-	status_t status;
-	int res;
-	unsigned char payload[8];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[8];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Copy part width and speed
-	memcpy( &payload[0], &width, sizeof( float ) );
-	memcpy( &payload[4], &speed, sizeof( float ) );
+    // Copy part width and speed
+    memcpy( &payload[0], &width, sizeof( float ) );
+    memcpy( &payload[4], &speed, sizeof( float ) );
 
-	// Submit command and wait for response. Push result to stack.
-	res = cmd_submit( 0x26, payload, 8, true, &resp, &resp_len );
-	if ( res != 2 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
-		if ( res > 0 ) free( resp );
-		return -1;
-	}
+    // Submit command and wait for response. Push result to stack.
+    res = cmd_submit( 0x26, payload, 8, true, &resp, &resp_len );
+    if ( res != 2 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
+        if ( res > 0 ) free( resp );
+        return -1;
+    }
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	free( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command RELEASE not successful: %s\n", status_to_str( status ) );
-		return -1;
-	}
+    // Check response status
+    status = cmd_get_response_status( resp );
+    free( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command RELEASE not successful: %s\n", status_to_str( status ) );
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 
@@ -335,68 +335,68 @@ int release( float width, float speed )
 // cmd_type:	0 - read only; 1 - position control; 2 - speed control
 int script_measure_move (unsigned char cmd_type, float cmd_width, float cmd_speed, gripper_response & info)
 {
-	status_t status;
-	int res;
-	const unsigned char CMD_CUSTOM = 0xB0;
-	unsigned char payload[9];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    const unsigned char CMD_CUSTOM = 0xB0;
+    unsigned char payload[9];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Custom payload format:
-	// 0:	Unused
-	// 1:	float, target width, used for 0xB1 command
-	// 5:	float, target speed, used for 0xB1 and 0xB2 command
-	payload[0] = 0x00;
-	memcpy(&payload[1], &cmd_width, sizeof(float));
-	memcpy(&payload[5], &cmd_speed, sizeof(float));
+    // Custom payload format:
+    // 0:	Unused
+    // 1:	float, target width, used for 0xB1 command
+    // 5:	float, target speed, used for 0xB1 and 0xB2 command
+    payload[0] = 0x00;
+    memcpy(&payload[1], &cmd_width, sizeof(float));
+    memcpy(&payload[5], &cmd_speed, sizeof(float));
 
-	// Submit command and process result
-	res = cmd_submit(CMD_CUSTOM + cmd_type, payload, 9, true, &resp, &resp_len );
-	try {
-		if (res < 2)
-			throw std::string("Invalid Response");
-		status = cmd_get_response_status(resp);
-		if (status == E_CMD_UNKNOWN)
-			throw std::string("Command unknown - make sure script is running");
-		if (status != E_SUCCESS)
-			throw std::string("Command failed");
-		if (res != 23)
-			throw std::string("Response payload incorrect (" + std::to_string(res) + ")");
+    // Submit command and process result
+    res = cmd_submit(CMD_CUSTOM + cmd_type, payload, 9, true, &resp, &resp_len );
+    try {
+        if (res < 2)
+            throw std::string("Invalid Response");
+        status = cmd_get_response_status(resp);
+        if (status == E_CMD_UNKNOWN)
+            throw std::string("Command unknown - make sure script is running");
+        if (status != E_SUCCESS)
+            throw std::string("Command failed");
+        if (res != 23)
+            throw std::string("Response payload incorrect (" + std::to_string(res) + ")");
 
-		// Extract data from response
-		int off=2;
-		unsigned char resp_state[6] = {0,0,0,0,0,0};
-		resp_state[2] = resp[2];
-		info.state = resp[2];					 off+=1;
-		char a[1024];
-		getStateValues(resp_state, a);
-		info.state_text = std::string(a);
-		info.position = convert(&resp[off]);     off+=4;
-		info.speed = convert(&resp[off]);        off+=4;
-		info.f_motor = convert(&resp[off]);      off+=4;
-		info.f_finger0 = convert(&resp[off]);    off+=4;
-		info.f_finger1 = convert(&resp[off]);    off+=4;
+        // Extract data from response
+        int off=2;
+        unsigned char resp_state[6] = {0,0,0,0,0,0};
+        resp_state[2] = resp[2];
+        info.state = resp[2];					 off+=1;
+        char a[1024];
+        getStateValues(resp_state, a);
+        info.state_text = std::string(a);
+        info.position = convert(&resp[off]);     off+=4;
+        info.speed = convert(&resp[off]);        off+=4;
+        info.f_motor = convert(&resp[off]);      off+=4;
+        info.f_finger0 = convert(&resp[off]);    off+=4;
+        info.f_finger1 = convert(&resp[off]);    off+=4;
 
 
-		info.ismoving = (info.state & 0x02/*fingers mnoving*/) != 0;
-		// only in position mode; cannot determine reliably for velocity mode
-		// 0x40 /* axis stopped */
+        info.ismoving = (info.state & 0x02/*fingers mnoving*/) != 0;
+        // only in position mode; cannot determine reliably for velocity mode
+        // 0x40 /* axis stopped */
 
-		if (0)
-			printf("Received: %02X, %6.2f,%6.2f,%6.2f,%6.2f,%6.2f\n  %s\n",
-				info.state, info.position, info.speed, info.f_motor, info.f_finger0, info.f_finger1,
-				info.state_text.c_str());
+        if (0)
+            printf("Received: %02X, %6.2f,%6.2f,%6.2f,%6.2f,%6.2f\n  %s\n",
+                info.state, info.position, info.speed, info.f_motor, info.f_finger0, info.f_finger1,
+                info.state_text.c_str());
 
-	} catch (std::string msg) {
-		msg = "measure_move: " + msg + "\n";
+    } catch (std::string msg) {
+        msg = "measure_move: " + msg + "\n";
         dbgPrint ("%s", msg.c_str());
-		if (res > 0) free(resp);
-		return 0;
-	}
+        if (res > 0) free(resp);
+        return 0;
+    }
 
 
-	free( resp );
-	return 1;
+    free( resp );
+    return 1;
 }
 
 
@@ -408,66 +408,66 @@ int script_measure_move (unsigned char cmd_type, float cmd_width, float cmd_spee
 
 int setAcceleration( float acc )
 {
-	status_t status;
-	int res;
-	unsigned char payload[4];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[4];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Copy target width and speed
-	memcpy( &payload[0], &acc, sizeof( float ) );
+    // Copy target width and speed
+    memcpy( &payload[0], &acc, sizeof( float ) );
 
-	// Submit command and wait for response. Push result to stack.
-	res = cmd_submit( 0x30, payload, 4, true, &resp, &resp_len );
-	if ( res != 2 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
-		if ( res > 0 ) free( resp );
-		return 0;
-	}
+    // Submit command and wait for response. Push result to stack.
+    res = cmd_submit( 0x30, payload, 4, true, &resp, &resp_len );
+    if ( res != 2 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
+        if ( res > 0 ) free( resp );
+        return 0;
+    }
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	free( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command SET ACCELERATION not successful: %s\n", status_to_str( status ) );
-		return -1;
-	}
+    // Check response status
+    status = cmd_get_response_status( resp );
+    free( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command SET ACCELERATION not successful: %s\n", status_to_str( status ) );
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 int setGraspingForceLimit( float force )
 {
-	status_t status;
-	int res;
-	unsigned char payload[4];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[4];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Copy target width and speed
-	memcpy( &payload[0], &force, sizeof( float ) );
+    // Copy target width and speed
+    memcpy( &payload[0], &force, sizeof( float ) );
 
-	// Submit command and wait for response. Push result to stack.
-	res = cmd_submit( 0x32, payload, 4, true, &resp, &resp_len );
-	if ( res != 2 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
-		if ( res > 0 ) free( resp );
-		return 0;
-	}
+    // Submit command and wait for response. Push result to stack.
+    res = cmd_submit( 0x32, payload, 4, true, &resp, &resp_len );
+    if ( res != 2 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 2)\n", res );
+        if ( res > 0 ) free( resp );
+        return 0;
+    }
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	free( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command SET GRASPING FORCE LIMIT not successful: %s\n", status_to_str( status ) );
-		return -1;
-	}
+    // Check response status
+    status = cmd_get_response_status( resp );
+    free( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command SET GRASPING FORCE LIMIT not successful: %s\n", status_to_str( status ) );
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 
@@ -478,76 +478,76 @@ int setGraspingForceLimit( float force )
 
 void systemState(std::string& state)
 {
-	status_t status;
-	int res;
-	unsigned char payload[3];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[3];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Don't use automatic update, so the payload bytes are 0.
-	memset( payload, 0, 3 );
+    // Don't use automatic update, so the payload bytes are 0.
+    memset( payload, 0, 3 );
 
-	// Submit command and wait for response. Expecting exactly 4 bytes response payload.
-	res = cmd_submit( 0x40, payload, 3, false, &resp, &resp_len );
-	if ( res != 6 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 6)\n", res );
-		if ( res > 0 ) free( resp );
-		return;
-	}
+    // Submit command and wait for response. Expecting exactly 4 bytes response payload.
+    res = cmd_submit( 0x40, payload, 3, false, &resp, &resp_len );
+    if ( res != 6 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 6)\n", res );
+        if ( res > 0 ) free( resp );
+        return;
+    }
 
-	// Check response status
-	status = cmd_get_response_status( resp );
+    // Check response status
+    status = cmd_get_response_status( resp );
 
-	/*
-	dbgPrint("LSB -> resp[0]: %x\n", resp[2]);
-	dbgPrint("       resp[1]: %x\n", resp[3]);
-	dbgPrint("       resp[2]: %x\n", resp[4]);
-	dbgPrint("MSB -> resp[3]: %x\n", resp[5]);
-	*/
-	
-	char a[1024];
-	// Spaeter durch std::memcpy ersetzen um Groeße variabel zu halten
+    /*
+    dbgPrint("LSB -> resp[0]: %x\n", resp[2]);
+    dbgPrint("       resp[1]: %x\n", resp[3]);
+    dbgPrint("       resp[2]: %x\n", resp[4]);
+    dbgPrint("MSB -> resp[3]: %x\n", resp[5]);
+    */
+    
+    char a[1024];
+    // Spaeter durch std::memcpy ersetzen um Groeße variabel zu halten
 
-	getStateValues(resp, a);	
-	state = std::string(a);
+    getStateValues(resp, a);	
+    state = std::string(a);
 }
 
 
 int graspingState( void )
 {
-	status_t status;
-	int res;
-	unsigned char payload[3];
-	unsigned char *resp;
-	unsigned int resp_len;
+    status_t status;
+    int res;
+    unsigned char payload[3];
+    unsigned char *resp;
+    unsigned int resp_len;
 
-	// Don't use automatic update, so the payload bytes are 0.
-	memset( payload, 0, 3 );
+    // Don't use automatic update, so the payload bytes are 0.
+    memset( payload, 0, 3 );
 
-	// Submit command and wait for response. Expecting exactly 4 bytes response payload.
-	res = cmd_submit( 0x41, payload, 3, false, &resp, &resp_len );
-	if ( res != 3 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 3)\n", res );
-		if ( res > 0 ) free( resp );
-		return 0;
-	}
+    // Submit command and wait for response. Expecting exactly 4 bytes response payload.
+    res = cmd_submit( 0x41, payload, 3, false, &resp, &resp_len );
+    if ( res != 3 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 3)\n", res );
+        if ( res > 0 ) free( resp );
+        return 0;
+    }
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command GET GRASPING STATE not successful: %s\n", status_to_str( status ) );
-		free( resp );
-		return 0;
-	}
+    // Check response status
+    status = cmd_get_response_status( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command GET GRASPING STATE not successful: %s\n", status_to_str( status ) );
+        free( resp );
+        return 0;
+    }
 
-	free( resp );
+    free( resp );
 
-	dbgPrint("GRASPING STATUS: %s\n", status_to_str (status) );
+    dbgPrint("GRASPING STATUS: %s\n", status_to_str (status) );
 
-	return (int) resp[2];
+    return (int) resp[2];
 }
 
 
@@ -616,106 +616,106 @@ float getForce(int auto_update){
 
 int getAcceleration( void )  
 {
-	status_t status;
-	int res;
-	unsigned char payload[6];
-	unsigned char *resp;
-	unsigned int resp_len;
-	unsigned char vResult[4];
+    status_t status;
+    int res;
+    unsigned char payload[6];
+    unsigned char *resp;
+    unsigned int resp_len;
+    unsigned char vResult[4];
 
-	// Don't use automatic update, so the payload bytes are 0.
-	memset( payload, 0, 1 );
+    // Don't use automatic update, so the payload bytes are 0.
+    memset( payload, 0, 1 );
 
-	// Submit command and wait for response. Expecting exactly 4 bytes response payload.
-	res = cmd_submit( 0x31, payload, 0, false, &resp, &resp_len );
-	if ( res != 6 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 3)\n", res );
-		if ( res > 0 ) free( resp );
-		return 0;
-	}
+    // Submit command and wait for response. Expecting exactly 4 bytes response payload.
+    res = cmd_submit( 0x31, payload, 0, false, &resp, &resp_len );
+    if ( res != 6 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 3)\n", res );
+        if ( res > 0 ) free( resp );
+        return 0;
+    }
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command GET ACCELERATION not successful: %s\n", status_to_str( status ) );
-		free( resp );
-		return 0;
-	}
-	
-	vResult[0] = resp[2];
-	vResult[1] = resp[3];
-	vResult[2] = resp[4];
-	vResult[3] = resp[5];
-	
-	free( resp );
+    // Check response status
+    status = cmd_get_response_status( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command GET ACCELERATION not successful: %s\n", status_to_str( status ) );
+        free( resp );
+        return 0;
+    }
+    
+    vResult[0] = resp[2];
+    vResult[1] = resp[3];
+    vResult[2] = resp[4];
+    vResult[3] = resp[5];
+    
+    free( resp );
 
-	return convert(vResult);
+    return convert(vResult);
 
-	//return (int) resp[2];
+    //return (int) resp[2];
 }
 
 int getGraspingForceLimit( void )  
 {
-	status_t status;
-	int res;
-	unsigned char payload[6];
-	unsigned char *resp;
-	unsigned int resp_len;
-	unsigned char vResult[4];
+    status_t status;
+    int res;
+    unsigned char payload[6];
+    unsigned char *resp;
+    unsigned int resp_len;
+    unsigned char vResult[4];
 
-	// Don't use automatic update, so the payload bytes are 0.
-	memset( payload, 0, 1 );
+    // Don't use automatic update, so the payload bytes are 0.
+    memset( payload, 0, 1 );
 
-	// Submit command and wait for response. Expecting exactly 4 bytes response payload.
-	res = cmd_submit( 0x33, payload, 0, false, &resp, &resp_len );
-	if ( res != 6 )
-	{
-		dbgPrint( "Response payload length doesn't match (is %d, expected 3)\n", res );
-		if ( res > 0 ) free( resp );
-		return 0;
-	}
+    // Submit command and wait for response. Expecting exactly 4 bytes response payload.
+    res = cmd_submit( 0x33, payload, 0, false, &resp, &resp_len );
+    if ( res != 6 )
+    {
+        dbgPrint( "Response payload length doesn't match (is %d, expected 3)\n", res );
+        if ( res > 0 ) free( resp );
+        return 0;
+    }
 
-	// Check response status
-	status = cmd_get_response_status( resp );
-	if ( status != E_SUCCESS )
-	{
-		dbgPrint( "Command GET GRASPING FORCE not successful: %s\n", status_to_str( status ) );
-		free( resp );
-		return 0;
-	}
-	
-	vResult[0] = resp[2];
-	vResult[1] = resp[3];
-	vResult[2] = resp[4];
-	vResult[3] = resp[5];
-	
-	free( resp );
+    // Check response status
+    status = cmd_get_response_status( resp );
+    if ( status != E_SUCCESS )
+    {
+        dbgPrint( "Command GET GRASPING FORCE not successful: %s\n", status_to_str( status ) );
+        free( resp );
+        return 0;
+    }
+    
+    vResult[0] = resp[2];
+    vResult[1] = resp[3];
+    vResult[2] = resp[4];
+    vResult[3] = resp[5];
+    
+    free( resp );
 
-	return convert(vResult);
+    return convert(vResult);
 
-	//return (int) resp[2];
+    //return (int) resp[2];
 }
 
 // MAIN
 /*
 void test( void )
 {
-	while( 1 )
-	{
-		dbgPrint("MOVE\n");
-		move( 0.0f, 60.0f );
-		getOpening();
+    while( 1 )
+    {
+        dbgPrint("MOVE\n");
+        move( 0.0f, 60.0f );
+        getOpening();
 
-		//sleep(1);
-		getForce();
-		//sleep(1);
+        //sleep(1);
+        getForce();
+        //sleep(1);
 
-		dbgPrint("HOMING\n");
-		homing();
-		getOpening();
-	}
+        dbgPrint("HOMING\n");
+        homing();
+        getOpening();
+    }
 }
 */
 

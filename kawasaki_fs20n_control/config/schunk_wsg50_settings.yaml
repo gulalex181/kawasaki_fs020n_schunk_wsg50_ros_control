@@ -1,4 +1,4 @@
-wsg50:
+wsg50_driver:
     size: 210
     protocol: "tcp"
     ip: "127.0.0.1"       # for test with gripper emulator
@@ -9,7 +9,7 @@ wsg50:
     # local_port: 1501
     # serial_port: "/dev/ttyS1"
     # serial_baudrate: 115200
-    # com_mode: "script"
+    com_mode: "script"
     grasping_force: 0.0
 
     # for more possible values of these params go to files
