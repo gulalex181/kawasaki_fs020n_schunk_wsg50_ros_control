@@ -1,0 +1,216 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="schunk_wsg_50">
+
+<xacro:macro name="schunk_wsg_50" params="parent *origin wsg50_finger">
+    <!-- PALM LINK -->
+    <link name="palm_link">
+        <inertial>
+            <mass value="1.2"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0.0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/palm.stl" scale="1 1 1"/>
+            </geometry>
+            <material name="yellow" />
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0.0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/palm_collision.stl" scale="1 1 1"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <!-- GRIPPER LEFT -->
+    <link name="gripper_left">
+        <inertial>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0.0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/gripper.stl" scale="0.001 0.001 0.001"/>
+            </geometry>
+            <material name="grey" />
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/gripper.stl" scale="0.001 0.001 0.001"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <!-- FINGER LEFT -->
+    <link name="finger_left">
+        <inertial>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0.0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/wsg50_${wsg50_finger}.stl" scale="1 1 1"/>
+            </geometry>
+            <material name="black" />
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/wsg50_${wsg50_finger}.stl" scale="1 1 1"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <!-- GRIPPER RIGHT -->
+    <link name="gripper_right">      
+        <inertial>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+        </inertial>      
+        <visual>
+            <origin rpy="0 0 0" xyz="0.0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/gripper.stl" scale="0.001 0.001 0.001"/>
+            </geometry>
+            <material name="grey" />
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/gripper.stl" scale="0.001 0.001 0.001"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <!-- FINGER RIGHT -->
+    <link name="finger_right">
+        <inertial>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0.0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/wsg50_${wsg50_finger}.stl" scale="1 1 1"/>
+            </geometry>
+            <material name="black" />
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/wsg_50/wsg50_${wsg50_finger}.stl" scale="1 1 1"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="palm_revolute">
+        <inertial>
+            <mass value="0.00001"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="0" ixy="0.0" ixz="0.0" iyy="0" iyz="0.0" izz=".0"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0.0 0 0"/>
+            <geometry>
+                <box size="0.00001 0.00001 0.00001"/>
+            </geometry>
+            <material name="black" />
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0 0 0"/>
+            <geometry>
+                <box size="0.00001 0.00001 0.00001"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="palm_joint" type="fixed">
+        <parent link="${parent}"/>
+        <child link="palm_link"/>
+        <xacro:insert_block name="origin" />
+    </joint>
+
+    <!-- Upper limit of pseudo revolute joint -->
+    <xacro:property name="palm_revolute_upper" value="${2 * pi}" />
+    <!-- Lower limit of pseudo revolute joint -->
+    <xacro:property name="palm_revolute_lower" value="0" />
+
+    <joint name="palm_revolute" type="revolute">
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="palm_link"/>
+        <child link="palm_revolute"/>
+        <axis xyz="0 0 1"/>
+        <limit lower="${palm_revolute_lower}" upper="${palm_revolute_upper}" effort="100" velocity="100" />
+    </joint>
+
+    <!-- Finger stroke = 55 mm = 0.055 m -->
+    <xacro:property name="palm_joint_gripper_upper" value="0.055" />
+    <!-- Let lower limirs of both fingers -->
+    <xacro:property name="palm_joint_gripper_lower" value="0.005" />
+
+    <!-- palm_joint_gripper_lower = multiplier * palm_revolute_lower + offset -->
+    <!-- palm_joint_gripper_upper = multiplier * palm_revolute_upper + offset -->
+
+    <xacro:property name="offset"     value="${palm_joint_gripper_lower}" />
+    <xacro:property name="multiplier" value="${(palm_joint_gripper_upper - offset) / palm_revolute_upper}" />
+
+    <!-- Params for left joint -->
+
+    <xacro:property name="palm_joint_gripper_left_lower"      value="-${palm_joint_gripper_upper}" />
+    <xacro:property name="palm_joint_gripper_left_upper"      value="-${palm_joint_gripper_lower}" />
+    <xacro:property name="palm_joint_gripper_left_multiplier" value="-${multiplier}" />
+    <xacro:property name="palm_joint_gripper_left_offset"     value="-${offset}" />
+
+    <!-- Params for right joint -->
+
+    <xacro:property name="palm_joint_gripper_right_lower"      value="${palm_joint_gripper_lower}" />
+    <xacro:property name="palm_joint_gripper_right_upper"      value="${palm_joint_gripper_upper}" />
+    <xacro:property name="palm_joint_gripper_right_multiplier" value="${multiplier}" />
+    <xacro:property name="palm_joint_gripper_right_offset"     value="${offset}" />
+
+    <joint name="palm_joint_gripper_left" type="prismatic">
+        <!-- <limit effort="1.0" lower="-0.055" upper="-0.0032" velocity="1.0"/> -->
+        <limit effort="1.0" lower="${palm_joint_gripper_left_lower}" upper="${palm_joint_gripper_left_upper}" velocity="1.0"/>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <parent link="palm_link"/>
+        <child link="gripper_left"/>
+        <axis xyz="1 0 0"/>
+        <mimic joint="palm_revolute" multiplier="${palm_joint_gripper_left_multiplier}" offset="${palm_joint_gripper_left_offset}" />
+    </joint>
+
+    <joint name="palm_joint_gripper_right" type="prismatic">
+        <!-- <limit effort="1.0" lower="0.0032" upper="0.055" velocity="1.0"/> -->
+        <limit effort="1.0" lower="${palm_joint_gripper_right_lower}" upper="${palm_joint_gripper_right_upper}" velocity="1.0"/>
+        <origin rpy="0 0 3.14159" xyz="0 0 0"/>
+        <parent link="palm_link"/>
+        <child link="gripper_right"/>
+        <axis xyz="-1 0 0"/>
+        <mimic joint="palm_revolute" multiplier="${palm_joint_gripper_right_multiplier}" offset="${palm_joint_gripper_right_offset}" />
+    </joint>
+
+    <joint name="gripper_joint_finger_left" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0.023"/>
+        <parent link="gripper_left"/>
+        <child link="finger_left"/>
+        <axis xyz="1 0 0"/>
+    </joint>
+
+    <joint name="gripper_joint_finger_right" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0.023"/>
+        <parent link="gripper_right"/>
+        <child link="finger_right"/>
+        <axis xyz="1 0 0"/>
+    </joint>
+</xacro:macro>
+
+</robot>
+

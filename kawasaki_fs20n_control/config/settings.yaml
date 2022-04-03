@@ -1,0 +1,33 @@
+kawasaki_fs020n_hw_interface:
+    robot_ip: "127.0.0.1"       # for test with robot emulator
+    #robot_ip: "192.168.5.250"  # ROBOT L
+    # robot_ip: "192.168.5.242" # ROBOT R
+    robot_port: 5555            # for test with robot emulator
+    # robot_port: 10050         # for real robot
+    robot_version: "1040"
+    output_to_console: false
+    robot_joints_number: 6
+
+kawasaki_fs020n_moveit_control:
+    table_size_x: 1.5
+    table_size_y: 0.7
+    table_size_z: 1.0
+    table_pos_x: 0.0
+    table_pos_y: 1.2
+    orientation_format: "rpy"
+    # orientation_format: "quaternion"
+    rpy_format: "deg"
+    # rpy_format: "rad"
+    goal_position_x: -0.5
+    goal_position_y: 1.0
+    goal_position_z: 2.0
+    # Use these params if you use Quaternion for orientation
+    goal_orientation_x: 0.0
+    goal_orientation_y: 0.0
+    goal_orientation_z: 0.0
+    goal_orientation_w: 1.0
+    # Use these params if you use RPY (param `orientation_format` = "rpy") for orientation
+    # may be in degrees (set `rpy_format` = "deg") or radians (set `rpy_format` = "rad")
+    goal_rpy_roll: 30.0
+    goal_rpy_pitch: 0.0
+    goal_rpy_yaw: 0.0

@@ -1,0 +1,52 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="robotic_system">
+
+    <xacro:include filename="$(find robotic_system_description)/urdf/fts.urdf.xacro" />
+    <xacro:include filename="$(find robotic_system_description)/urdf/gripper_adapter.urdf.xacro" />
+    <xacro:include filename="$(find robotic_system_description)/urdf/kawasaki_fs020n_manipulator.urdf.xacro" />
+    <xacro:include filename="$(find robotic_system_description)/urdf/schunk_wsg_50.urdf.xacro" />
+    <xacro:include filename="$(find robotic_system_description)/urdf/zed.urdf.xacro" />
+
+    <material name="orange_color">
+        <color rgba="1 0.6 0.3 1"/>
+    </material>
+
+    <material name="yellow">
+        <color rgba="0.8 0.7 0.5 1"/>
+    </material>
+
+    <material name="grey">
+        <color rgba="0.3 0.3 0.3 1"/>
+    </material>
+
+    <material name="blue">
+        <color rgba="0.2 0.2 0.9 1"/>
+    </material>
+
+    <material name="black">
+        <color rgba="0 0 0 1"/>
+    </material>
+
+    <link name="robotic_system"/>
+         
+    <xacro:kawasaki_fs020n_manipulator parent="robotic_system">
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:kawasaki_fs020n_manipulator>
+
+    <xacro:fts parent="link_6">
+        <origin xyz="0 0 0.045" rpy="0 0 0" />
+    </xacro:fts>
+
+    <xacro:gripper_adapter parent="fts_frame">
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:gripper_adapter>
+
+    <xacro:schunk_wsg_50 parent="gripper_adapter_tool" wsg50_finger="original">
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:schunk_wsg_50>
+
+    <xacro:zed parent="gripper_adapter_link">
+        <origin xyz="-0.06 0.06 0.087" rpy="1.57 -1.57 0" />
+    </xacro:zed>
+
+</robot>

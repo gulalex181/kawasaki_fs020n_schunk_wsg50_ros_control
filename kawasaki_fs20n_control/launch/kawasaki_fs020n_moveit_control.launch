@@ -1,0 +1,3 @@
+<launch>
+    <node name="kawasaki_fs020n_move_group_interface" pkg="kawasaki_fs20n_control" type="kawasaki_fs020n_moveit_control" output="screen" />
+</launch>

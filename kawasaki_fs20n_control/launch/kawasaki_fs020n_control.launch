@@ -1,0 +1,81 @@
+<launch>
+
+    <!-- Load the URDF to the parameter server -->
+    <param
+        name="robot_description"
+        command="$(find xacro)/xacro '$(find robotic_system_description)/urdf/robotic_system.urdf.xacro'"
+    />
+
+    <!-- Launch RViz -->
+    <node
+        pkg="rviz"
+        type="rviz"
+        name="rviz"
+        args="-d $(find kawasaki_fs20n_control)/config/rviz_config.rviz"
+    />
+
+    <!-- Load controller settings to the parameter server -->
+    <rosparam
+        file="$(find kawasaki_fs20n_control)/config/kawasaki_fs20n_controllers.yaml"
+        command="load"
+    />
+
+    <!-- Load settings to the parameter server -->
+    <rosparam
+        file="$(find kawasaki_fs20n_control)/config/settings.yaml"
+        command="load"
+    />
+
+    <!-- Load schunk wsg50 settings to the parameter server -->
+    <rosparam
+        file="$(find kawasaki_fs20n_control)/config/schunk_wsg50_settings.yaml"
+        command="load"
+    />
+
+    <!-- Run hardware interface -->
+    <node
+        pkg="kawasaki_fs20n_control"
+        type="kawasaki_fs20n_hw_main"
+        name="kawasaki_fs20n_hw_interface"
+        respawn="false"
+        output="screen"
+    />
+    
+    <!-- Run controller manager -->
+    <node
+        pkg="controller_manager"
+        type="controller_manager"
+        name="ros_control_controller_manager"
+        respawn="false"
+        output="screen"
+        args="spawn 
+            joint_state_controller
+            manipulator_controller
+            gripper_controller
+        "
+    />
+
+    <!-- Run converter of joint states to /tf tranforms -->
+    <!-- It will subscribe to the output of joint_state_controller and will update transformation tree dynamically -->
+    <node
+        pkg="robot_state_publisher"
+        type="robot_state_publisher"
+        name="robot_state_publisher"
+        respawn="true"
+    />
+    
+    <!-- Run MoveIt -->
+    <include file="$(find kawasaki_fs020n_schunk_wsg_50_moveit)/launch/move_group.launch">
+        <arg name="allow_trajectory_execution" value="true"/>
+        <!-- About simple, ros_control and fake moveit controller manager you can read here: -->
+        <!-- https://ros-planning.github.io/moveit_tutorials/doc/controller_configuration/controller_configuration_tutorial.html#example-controller-manager -->
+        <arg name="moveit_controller_manager" value="ros_control" />
+        <arg name="info" value="true"/>
+        <arg name="pipeline" value="ompl"/>
+        <arg name="load_robot_description" value="true"/>
+    </include>
+
+    <!-- Run schunk wsg50 driver -->
+    <node name="wsg50_driver"  pkg="wsg50_driver" type="wsg50" output="screen" />
+
+</launch>

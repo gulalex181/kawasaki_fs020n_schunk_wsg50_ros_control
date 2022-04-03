@@ -1,0 +1,17 @@
+wsg50:
+    size: 210
+    protocol: "tcp"
+    ip: "127.0.0.1"       # for test with gripper emulator
+    # ip: "192.168.5.246" # for real gripper
+    port: 5222            # for test with gripper emulator
+    # port: 1000          # for real gripper
+    rate: 50
+    # local_port: 1501
+    # serial_port: "/dev/ttyS1"
+    # serial_baudrate: 115200
+    # com_mode: "script"
+    grasping_force: 0.0
+
+    # for more possible values of these params go to files
+    # `wsg50_can.launch`, `wsg50_serial.launch`, `wsg50_tcp.launch`,
+    # `wsg50_tcp_script.launch` and `wsg50_udp_script.launch`.

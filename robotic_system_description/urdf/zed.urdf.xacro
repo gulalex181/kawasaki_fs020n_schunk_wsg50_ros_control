@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="zed">
+
+<xacro:macro name="zed" params="parent *origin">
+    <link name="zed_left_camera">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder radius="0.007" length=".031"/>
+            </geometry>
+            <material name="dark_grey">
+                <color rgba="0.1 0.1 0.1 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder radius="0.007" length=".031"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="zed_center">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/zed/zed.stl" />
+            </geometry>
+            <material name="light_grey">
+                <color rgba="0.8 0.8 0.8 0.8"/>
+            </material>
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0.0 0 0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/zed/zed.stl" scale="1 1 1"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="zed_right_camera">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder radius="0.007" length=".031"/>
+            </geometry>
+            <material name="dark_grey">
+                <color rgba="0.1 0.1 0.1 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder radius="0.007" length=".031"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <joint name="zed_joint" type="fixed">
+        <parent link="${parent}"/>
+        <child link="zed_left_camera"/>
+        <xacro:insert_block name="origin" />
+    </joint>
+
+    <!-- The distance between two cameras is 120 mm -->
+
+    <joint name="zed_center_joint" type="fixed">
+        <parent link="zed_left_camera"/>
+        <child link="zed_center"/>
+        <origin xyz="0 -0.06 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="zed_right_camera_joint" type="fixed">
+        <parent link="zed_left_camera"/>
+        <child link="zed_right_camera"/>
+        <origin xyz="0 -0.12 0" rpy="0 0 0" />
+    </joint>
+</xacro:macro>
+
+</robot>

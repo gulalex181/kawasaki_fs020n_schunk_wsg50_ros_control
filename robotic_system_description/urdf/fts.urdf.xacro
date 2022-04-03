@@ -1,0 +1,50 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="fts">
+
+<xacro:macro name="fts" params="parent *origin">
+    <joint name="fts_joint" type="fixed">
+        <parent link="${parent}"/>
+        <child link="fts_link"/>
+        <xacro:insert_block name="origin" />
+    </joint>
+
+    <joint name="fts_tool_joint" type="fixed">
+        <origin xyz="0 0 0.033" rpy="0 0 0" />
+        <parent link="fts_link"/>
+        <child link="fts_tool"/>
+    </joint>
+
+    <joint name="fts_frame_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 3.1416" />
+        <parent link="fts_tool"/>
+        <child link="fts_frame"/>
+    </joint>
+
+    <link name="fts_link">
+        <inertial>
+            <mass value="1.2"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0.0 0 0.0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/fts/fts.stl" scale="1.1 1.1 1.1"/>
+            </geometry>
+            <material name="orange_color" />
+        </visual>
+        <collision>
+            <origin rpy="0 0 0" xyz="0.0 0 0.0"/>
+            <geometry>
+                <mesh filename="package://robotic_system_description/mesh/fts/fts.stl" scale="1.1 1.1 1.1"/>
+            </geometry>
+        </collision>
+    </link>
+
+    <link name="fts_tool"/> 
+
+    <link name="fts_frame"/>
+</xacro:macro>
+
+</robot>
+
