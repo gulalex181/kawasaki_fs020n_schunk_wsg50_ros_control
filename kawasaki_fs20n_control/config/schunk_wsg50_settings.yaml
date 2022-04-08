@@ -1,5 +1,5 @@
 wsg50_driver:
-    size: 210
+    size: 110 # means stroke of fingers (55 mm * 2 = 110 mm)
     protocol: "tcp"
     ip: "127.0.0.1"       # for test with gripper emulator
     # ip: "192.168.5.246" # for real gripper
