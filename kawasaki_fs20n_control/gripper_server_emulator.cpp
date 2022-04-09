@@ -1,149 +1,12 @@
 // $ g++ gripper_server_emulator.cpp -o gripper_server_emulator
 
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include <string.h>
-#include <sstream>
-#include <vector>
-#include <signal.h>
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <byteswap.h>
-
-typedef struct {
-    uint8_t preamble[3] = {0xAA, 0xAA, 0xAA};
-    uint8_t command_id;
-    uint16_t size_of_payload;
-    uint16_t status_code;
-    uint8_t *payload;
-} TRESPONSE;
-
-//! Status codes
-typedef enum {
-    E_SUCCESS = 0,            //!< No error
-    E_NOT_AVAILABLE,          //!< Device, service or data is not available
-    E_NO_SENSOR,              //!< No sensor connected
-    E_NOT_INITIALIZED,        //!< The device is not initialized
-    E_ALREADY_RUNNING,        //!< Service is already running
-    E_FEATURE_NOT_SUPPORTED,  //!< The asked feature is not supported
-    E_INCONSISTENT_DATA,      //!< One or more dependent parameters mismatch
-    E_TIMEOUT,                //!< Timeout error
-    E_READ_ERROR,             //!< Error while reading from a device
-    E_WRITE_ERROR,            //!< Error while writing to a device
-    E_INSUFFICIENT_RESOURCES, //!< No memory available
-    E_CHECKSUM_ERROR,         //!< Checksum error
-    E_NO_PARAM_EXPECTED,      //!< No parameters expected
-    E_NOT_ENOUGH_PARAMS,      //!< Not enough parameters
-    E_CMD_UNKNOWN,            //!< Unknown command
-    E_CMD_FORMAT_ERROR,       //!< Command format error
-    E_ACCESS_DENIED,          //!< Access denied
-    E_ALREADY_OPEN,           //!< The interface is already open
-    E_CMD_FAILED,             //!< Command failed
-    E_CMD_ABORTED,            //!< Command aborted
-    E_INVALID_HANDLE,         //!< invalid handle
-    E_NOT_FOUND,              //!< device not found
-    E_NOT_OPEN,               //!< device not open
-    E_IO_ERROR,               //!< I/O error
-    E_INVALID_PARAMETER,      //!< invalid parameter
-    E_INDEX_OUT_OF_BOUNDS,    //!< index out of bounds
-    E_CMD_PENDING,            //!< Command execution needs more time
-    E_OVERRUN,                //!< Data overrun
-    E_RANGE_ERROR,            //!< Range error
-    E_AXIS_BLOCKED,           //!< Axis is blocked
-    E_FILE_EXISTS             //!< File already exists
-} TStat;
-
-typedef enum {
-    UNKNOWN = 0, // unknown
-    WSG_50,      // WSG 50
-    WSG_32,      // WSG 32
-    KMS_40,      // Force-Torque Sensor KMS 40
-    WTS,         // Tactile Sensing Module WTS
-    WSG_25,      // WSG 25
-    WSG_70       // WSG 70
-} TYPE;
-
-typedef enum {
-    REQUEST = 0,
-    RESPONSE
-} NET_DIR;
-
-#define LOG_PREFIX             "GRIPPER EMULATOR SERVER"
-#define BUFFER_SIZE            1024     //!< buffer size
-#define PORT                   5222     //!< port
-#define SYSTEM_TYPE            WSG_50   //!< hardware rivision
-#define HARDWARE_RIVISION      5        //!< hardware rivision
-#define SERIAL_NUMBER          00003713 //!< serial number
-#define FIRMWARE_VERSION_MAJOR 3        //!< firmware major version
-#define FIRMWARE_VERSION_MINOR 0        //!< firmware minor version
-#define FIRMWARE_VERSION_PATH  0        //!< firmware path version
-
-const unsigned short CRC_TABLE[256] = {
-    0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
-    0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
-    0x1231, 0x0210, 0x3273, 0x2252, 0x52b5, 0x4294, 0x72f7, 0x62d6,
-    0x9339, 0x8318, 0xb37b, 0xa35a, 0xd3bd, 0xc39c, 0xf3ff, 0xe3de,
-    0x2462, 0x3443, 0x0420, 0x1401, 0x64e6, 0x74c7, 0x44a4, 0x5485,
-    0xa56a, 0xb54b, 0x8528, 0x9509, 0xe5ee, 0xf5cf, 0xc5ac, 0xd58d,
-    0x3653, 0x2672, 0x1611, 0x0630, 0x76d7, 0x66f6, 0x5695, 0x46b4,
-    0xb75b, 0xa77a, 0x9719, 0x8738, 0xf7df, 0xe7fe, 0xd79d, 0xc7bc,
-    0x48c4, 0x58e5, 0x6886, 0x78a7, 0x0840, 0x1861, 0x2802, 0x3823,
-    0xc9cc, 0xd9ed, 0xe98e, 0xf9af, 0x8948, 0x9969, 0xa90a, 0xb92b,
-    0x5af5, 0x4ad4, 0x7ab7, 0x6a96, 0x1a71, 0x0a50, 0x3a33, 0x2a12,
-    0xdbfd, 0xcbdc, 0xfbbf, 0xeb9e, 0x9b79, 0x8b58, 0xbb3b, 0xab1a,
-    0x6ca6, 0x7c87, 0x4ce4, 0x5cc5, 0x2c22, 0x3c03, 0x0c60, 0x1c41,
-    0xedae, 0xfd8f, 0xcdec, 0xddcd, 0xad2a, 0xbd0b, 0x8d68, 0x9d49,
-    0x7e97, 0x6eb6, 0x5ed5, 0x4ef4, 0x3e13, 0x2e32, 0x1e51, 0x0e70,
-    0xff9f, 0xefbe, 0xdfdd, 0xcffc, 0xbf1b, 0xaf3a, 0x9f59, 0x8f78,
-    0x9188, 0x81a9, 0xb1ca, 0xa1eb, 0xd10c, 0xc12d, 0xf14e, 0xe16f,
-    0x1080, 0x00a1, 0x30c2, 0x20e3, 0x5004, 0x4025, 0x7046, 0x6067,
-    0x83b9, 0x9398, 0xa3fb, 0xb3da, 0xc33d, 0xd31c, 0xe37f, 0xf35e,
-    0x02b1, 0x1290, 0x22f3, 0x32d2, 0x4235, 0x5214, 0x6277, 0x7256,
-    0xb5ea, 0xa5cb, 0x95a8, 0x8589, 0xf56e, 0xe54f, 0xd52c, 0xc50d,
-    0x34e2, 0x24c3, 0x14a0, 0x0481, 0x7466, 0x6447, 0x5424, 0x4405,
-    0xa7db, 0xb7fa, 0x8799, 0x97b8, 0xe75f, 0xf77e, 0xc71d, 0xd73c,
-    0x26d3, 0x36f2, 0x0691, 0x16b0, 0x6657, 0x7676, 0x4615, 0x5634,
-    0xd94c, 0xc96d, 0xf90e, 0xe92f, 0x99c8, 0x89e9, 0xb98a, 0xa9ab,
-    0x5844, 0x4865, 0x7806, 0x6827, 0x18c0, 0x08e1, 0x3882, 0x28a3,
-    0xcb7d, 0xdb5c, 0xeb3f, 0xfb1e, 0x8bf9, 0x9bd8, 0xabbb, 0xbb9a,
-    0x4a75, 0x5a54, 0x6a37, 0x7a16, 0x0af1, 0x1ad0, 0x2ab3, 0x3a92,
-    0xfd2e, 0xed0f, 0xdd6c, 0xcd4d, 0xbdaa, 0xad8b, 0x9de8, 0x8dc9,
-    0x7c26, 0x6c07, 0x5c64, 0x4c45, 0x3ca2, 0x2c83, 0x1ce0, 0x0cc1,
-    0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8,
-    0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
-};
-
-// Byte access
-#define hi(x)    (unsigned char) ( ((x) >> 8) & 0xff ) // Returns the upper byte of the passed short
-#define lo(x)    (unsigned char) ( (x) & 0xff )        // Returns the lower byte of the passed short
-
-void CtrlC_handler(int sig);
-void print_packet_data(const char* prefix, int count_of_bytes, uint8_t* packet, NET_DIR dir);
-uint8_t* request_handling(uint8_t* request, uint16_t* response_size);
-uint16_t checksum_update_crc16(uint8_t* data, u_int16_t size, uint16_t crc);
-uint8_t* msg_build(TRESPONSE *response, uint16_t* size);
-// TStat msg_send(FILE *file, TMESSAGE *msg);
-
-// Commands
-TRESPONSE get_system_information(uint8_t* request_payload, uint16_t request_payload_size);
-
-uint8_t buffer[BUFFER_SIZE] = {0};
-
-int server_socket_fd = 0;
-int client_socket_fd = 0;
-
-struct sockaddr_in serverAddr;
+#include "gripper_server_emulator.h"
 
 int main() {
     signal(SIGINT, CtrlC_handler);
 
     if ((server_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("[GRIPPER EMULATOR SERVER]: socket failed");
+        perror(("[" + std::string(LOG_PREFIX) + "]: socket failed").c_str());
         exit(EXIT_FAILURE);
     }
 
@@ -152,68 +15,61 @@ int main() {
     serverAddr.sin_port = htons(PORT);
 
     if (bind(server_socket_fd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) < 0) {
-        perror("[GRIPPER EMULATOR SERVER]: bind failed");
+        perror(("[" + std::string(LOG_PREFIX) + "]: bind failed").c_str());
         exit(EXIT_FAILURE);
     }
 
     if (listen(server_socket_fd, 0) < 0) {
-        perror("[GRIPPER EMULATOR SERVER]: listen failed");
+        perror(("[" + std::string(LOG_PREFIX) + "]: listen failed").c_str());
         exit(EXIT_FAILURE);
     }
 
     while (1) {
-        std::cout << "[GRIPPER EMULATOR SERVER]: Listening for incoming connections" << std::endl;
+        printf("[%s]: Listening for incoming connections\n", LOG_PREFIX);
 
         client_socket_fd = accept(server_socket_fd, NULL, NULL);
         if (client_socket_fd == -1) {
-            perror("[GRIPPER EMULATOR SERVER]: error when accepting connection");
+            perror(("[" + std::string(LOG_PREFIX) + "]: error when accepting connection").c_str());
             exit(EXIT_FAILURE);
         } else {
-            std::cout << "[GRIPPER EMULATOR SERVER]: Client is connected, fd " << client_socket_fd << std::endl;
+            printf("[%s]: Client is connected, fd - %d\n", LOG_PREFIX, client_socket_fd);
 
             while (1) {
-                memset(buffer, 0, BUFFER_SIZE);
+                memset(request, 0, BUFFER_SIZE);
 
-                int count_of_bytes = read(client_socket_fd, buffer, sizeof(buffer) - 1);
+                int request_size = read(client_socket_fd, request, sizeof(request) - 1);
 
-                // if (count_of_bytes < 0) {
-                //     perror("[GRIPPER EMULATOR SERVER]: reading from socker error");
-                //     exit(EXIT_FAILURE);
-                // }
-
-                if (count_of_bytes <= 0) continue;
+                if (request_size <= 0) continue;
 
                 std::string request_prefix = "(request) ";
-                print_packet_data(request_prefix.c_str(), count_of_bytes, buffer, REQUEST);
+                
+                print_packet_data(request_prefix.c_str(), request_size, request, REQUEST, "", "");
 
                 // Request handling
-                // std::string response = request_handling(buffer);
+                bool need_to_free;
+                std::string response_status;
+                std::string command_name;
                 uint16_t response_size;
-                uint8_t* response = request_handling(buffer, &response_size);
+                uint8_t* response = request_handling(request, &response_size, &response_status, &command_name, &need_to_free);
                 
-                if (!response) {
-                    
-                }
-
                 std::string response_prefix = "(response) ";
-                print_packet_data(response_prefix.c_str(), response_size, response, RESPONSE);
-
-                // // Close connection
-                // if (response == "client is disconnected") {
-                //     break;
-                // }
-
-                // std::cout << "[GRIPPER EMULATOR SERVER]: Response: '" << response << "'" << std::endl;
-                
-                if (write(client_socket_fd, response, sizeof(response)) < 0) {
-                    perror("[GRIPPER EMULATOR SERVER]: writing to socker error");
+                print_packet_data(response_prefix.c_str(), response_size, response, RESPONSE, command_name, response_status);
+                                
+                if (write(client_socket_fd, response, response_size) < 0) {
+                    perror(("[" + std::string(LOG_PREFIX) + "]: writing to socker error").c_str());
                     exit(EXIT_FAILURE);
                 }
 
-                std::cout << "[GRIPPER EMULATOR SERVER]: Response is sent" << std::endl << std::endl;
-
+                printf("[%s]: Response is sent\n\n", LOG_PREFIX);
+                
                 // Clear the memory allocated for response packet
-                free(response);
+                if (need_to_free) {
+                    free(response);
+                }
+
+                if (command_name == "DisconnectAnnouncement") {
+                    break;
+                }
             }
         }
     }
@@ -224,40 +80,82 @@ void CtrlC_handler(int sig) {
     exit(EXIT_SUCCESS);
 }
 
-uint8_t* request_handling(uint8_t* request, uint16_t* response_size) {
+uint8_t* request_handling(uint8_t* request_packet, uint16_t* response_size,
+    std::string* response_status, std::string* command_name, bool* need_to_free) {
 
-    uint8_t  command_id   = request[3];
-    uint16_t payload_size = (request[5] << 8) | request[4];
-    uint8_t  payload[payload_size];
+    // Request parsing
+
+    TREQUEST request;
     
-    for (int i = 0; i < payload_size; ++i) {
-        payload[i] = request[i];
+    request.command_id      = request_packet[3];
+    request.size_of_payload = (request_packet[5] << 8) | request_packet[4];
+
+    uint8_t _payload[request.size_of_payload];
+    request.payload = _payload;
+    
+    for (int i = 0; i < request.size_of_payload; ++i) {
+        request.payload[i] = request_packet[6 + i];
     }
 
-    uint16_t checksum = (request[payload_size + 1] << 8) | request[payload_size];
+    uint16_t checksum = (request_packet[6 + request.size_of_payload + 1] << 8) | request_packet[6 + request.size_of_payload];
+
+    // Checking CRC checksum
 
     // PREAMLE(3 bytes) + COMMAND_ID(1) + SIZE_OF_PAYLOAD(2) + PAYLOAD + CHECKSUM(2)
-    uint16_t request_checksum = checksum_update_crc16(request, 3 + 1 + 2 + payload_size + 2, 0xFFFF);
+    uint16_t request_checksum = checksum_update_crc16(request_packet, 3 + 1 + 2 + request.size_of_payload + 2, 0xFFFF);
     
     if (request_checksum == 0) {
-        std::cout << "[GRIPPER EMULATOR SERVER]: CRC Checksum is " << request_checksum << ", OK" << std::endl << std::endl;
+        printf("[%s]: CRC Checksum is %d, OK\n\n", LOG_PREFIX, request_checksum);
     } else {
-        std::cout << "[GRIPPER EMULATOR SERVER]: CRC Checksum is not 0, ERROR" << std::endl << std::endl;
+        printf("[%s]: CRC Checksum is not 0, ERROR\n\n", LOG_PREFIX);
     }
 
-    TRESPONSE response = get_system_information(payload, payload_size);
- 
-    // for (int i = 0; i < response.size_of_payload; ++i) {
-    //     printf("%X ", response.payload[i]);
-    // }
+    // Command execution
 
-    response.command_id = command_id;
+    TRESPONSE response;
 
-    if (response.status_code != E_SUCCESS) {
-        // ...
+    switch (request.command_id) {
+        // Command ID 0x07
+        case DisconnectAnnouncement:
+            response = disconnect_announcement(&request);
+            *command_name = "DisconnectAnnouncement";
+            break;
+        // Command ID 0x20
+        case Homing:
+            response = homing(&request);
+            *command_name = "Homing";
+            break;
+        // Command ID 0x50
+        case GetSystemInformation:
+            response = get_system_information(&request);
+            *command_name = "GetSystemInformation";
+            break;
+        // Command ID 0xB0
+        case Measure:
+            response = measure(&request);
+            *command_name = "Measure";
+            break;
+        default:
+            // error, no such command
+            *command_name = "";
+            break;
+    }
+    
+    // Response packet building
+
+    uint8_t* response_packet = response_packet_build(&response, response_size);
+
+    if (!response_packet) {
+        response_packet = insufficient_resourses_response_packet_build(request.command_id);
+        *response_size = 10;
+        *response_status = "E_INSUFFICIENT_RESOURCES";
+        *need_to_free = false;
     }
 
-    return msg_build(&response, response_size);
+    *response_status = response.status;
+    *need_to_free = true;
+
+    return response_packet;
 }
 
 /*********************************************************************/
@@ -295,9 +193,9 @@ You have to free the returned buffer, if you do not use it anymore.
 
 */ 
 /*********************************************************************/ 
-uint8_t* msg_build(TRESPONSE *response, uint16_t* response_size) {
+uint8_t* response_packet_build(TRESPONSE *response, uint16_t* response_size) {
     uint8_t* response_packet;
-    uint16_t chksum;
+    uint16_t checksum;
     uint16_t response_size_packet;
     uint8_t preamble_size = sizeof(response->preamble);
 
@@ -307,98 +205,102 @@ uint8_t* msg_build(TRESPONSE *response, uint16_t* response_size) {
     response_packet = (uint8_t*)malloc(response_size_packet);
     if (!response_packet) {
         *response_size = 0;
-        free(response->payload);
+        
+        // Free memory allocated for payload
+        if (response->size_of_payload) {
+            free(response->payload);
+        }
+        
         return NULL;
     }
 
-    // Assemble the message header:
+    // Assemble the packet header
     for (int i = 0; i < preamble_size; ++i) {
         response_packet[i] = response->preamble[i];
     }
 
     response_packet[preamble_size]     = response->command_id;          // Command ID
 
-    response_packet[preamble_size + 1] = lo(response->size_of_payload); // Packet size low byte
-    response_packet[preamble_size + 2] = hi(response->size_of_payload); // Packet size high byte
+    // packet size = payload size + status code size
+    response_packet[preamble_size + 1] = lo(response->size_of_payload + 0x02); // Packet size low byte
+    response_packet[preamble_size + 2] = hi(response->size_of_payload + 0x02); // Packet size high byte
 
     response_packet[preamble_size + 3] = lo(response->status_code);     // Status code low byte
     response_packet[preamble_size + 4] = hi(response->status_code);     // Status code high byte
 
-    // Copy payload to buffer:
+    // Calculate the checksum
+    // PREAMLE(3 bytes) + COMMAND_ID(1) + SIZE_OF_PAYLOAD(2) + STATUS_CODE(2)
+    checksum = checksum_update_crc16(response_packet, preamble_size + 5, 0xFFFF);
+
+    // Copy payload to buffer
     if (response->size_of_payload) {
         memcpy(&response_packet[preamble_size + 5], response->payload, response->size_of_payload);
+
+        // Calculate the checksum
+        // add PAYLOAD
+        checksum = checksum_update_crc16(response->payload, response->size_of_payload, checksum);
+        
+        // Free memory allocated for payload
         free(response->payload);
     }
 
-    // Calculate the checksum over the header, include the preamble: 
-    chksum = checksum_update_crc16(response_packet, preamble_size + 5 + response->size_of_payload, 0xFFFF);
-
-    // Add checksum to message: 
-    response_packet[preamble_size + 5 + response->size_of_payload] = lo(chksum); // Checksum low byte
-    response_packet[preamble_size + 6 + response->size_of_payload] = hi(chksum); // Checksum high byte
+    // Add checksum to packet 
+    response_packet[preamble_size + 5 + response->size_of_payload] = lo(checksum); // Checksum low byte
+    response_packet[preamble_size + 6 + response->size_of_payload] = hi(checksum); // Checksum high byte
 
     *response_size = response_size_packet;
     
     return response_packet;
 } 
 
+void print_packet_data(const char* prefix, int count_of_bytes, uint8_t* packet, NET_DIR dir,
+    std::string command, std::string status) {
 
-/*********************************************************************/ 
-/*! 
-Send a message to an open file handle 
-
-@param *file Handle of an open file to which the message should be sent 
-@param *msg Pointer to the message that should be sent 
-
-@return E_SUCCESS, if successful, otherwise error code 
-*/ 
-/*********************************************************************/ 
-// TStat msg_send(FILE *file, TMESSAGE *msg) {
-//     unsigned int c;
-//     uint16_t size;
-
-//     // Convert message into byte sequence:
-//     unsigned char *buf = msg_build(msg, &size);
-//     if (!buf) {
-//         return E_INSUFFICIENT_RESOURCES;
-//     }
-
-//     // Transmit buffer:
-//     c = fwrite(buf, size, 1, file);
-
-//     // Free allocated memory:
-//     free(buf);
-//     if (c != 1) {
-//         return E_WRITE_ERROR;
-//     }
-
-//     return E_SUCCESS;
-// }
-
-void print_packet_data(const char* prefix, int count_of_bytes, uint8_t* packet, NET_DIR dir) {
     printf("[%s]: %sPacket size: %d bytes\n", LOG_PREFIX, prefix, count_of_bytes);
     printf("[%s]: %sPacket: %02X %02X %02X %02X %02X %02X ",
         LOG_PREFIX,
         prefix,
-        packet[0], packet[1], packet[2], packet[3], packet[4], packet[5]
+        packet[0], packet[1], packet[2], // PREAMBLE
+        packet[3],                       // COMMAND_ID
+        packet[4], packet[5]             // SIZE_OF_PAYLOAD
     );
+
+    if (dir == RESPONSE) {
+        printf("%02X %02X ", packet[6], packet[7]); // STATUS_CODE
+    }
 
     uint16_t payload_size = (packet[5] << 8) | packet[4];
 
-    for (int i = 0; i < payload_size; ++i) {
-        printf("%02X ", packet[i]);
+    if (dir == RESPONSE) {
+        payload_size = payload_size - 0x02; // subtract size of status code
     }
 
-    printf("%02X %02X\n", packet[payload_size], packet[payload_size + 1]);
+    for (int i = 0; i < payload_size; ++i) {
+        if (dir == REQUEST) {
+            printf("%02X ", packet[6 + i]); // PAYLOAD
+        } else if (dir == RESPONSE) {
+            printf("%02X ", packet[8 + i]); // PAYLOAD
+        }
+    }
+
+    if (dir == REQUEST) {
+        printf("%02X %02X\n", packet[6 + payload_size], packet[6 + payload_size + 1]); // CHECKSUM
+    } else if (dir == RESPONSE) {
+        printf("%02X %02X\n", packet[8 + payload_size], packet[8 + payload_size + 1]); // CHECKSUM
+    }
 
     printf("[%s]: %sParsed packet: \n\n", LOG_PREFIX, prefix);
 
     printf("PREAMBLE: %02X %02X %02X\n", packet[0], packet[1], packet[2]);
-    printf("COMMAND ID: %02X\n", packet[3]);
+    if (dir == REQUEST) {
+        printf("COMMAND ID: %02X\n", packet[3]);
+    } else if (dir == RESPONSE) {
+        printf("COMMAND ID: %02X (%s)\n", packet[3], command.c_str());
+    }
     printf("SIZE OF PAYLOAD: %02X %02X\n", packet[4], packet[5]);
     
     if (dir == RESPONSE) {
-        printf("STATUS CODE: %02X %02X\n", packet[6], packet[7]);
+        printf("STATUS CODE: %02X %02X (%s)\n", packet[6], packet[7], status.c_str());
     }
     
     printf("PAYLOAD: ");
@@ -418,36 +320,144 @@ void print_packet_data(const char* prefix, int count_of_bytes, uint8_t* packet, 
     }
 }
 
+uint8_t* insufficient_resourses_response_packet_build(uint8_t command_id) {
+    // Command ID
+    insufficient_resourses_response_packet[3] = command_id;
+    
+    // Calculate the checksum
+    uint16_t checksum = checksum_update_crc16(insufficient_resourses_response_packet, 8, 0xFFFF);
+
+    printf("checksum: %X\n", checksum);
+    // Add checksum to packet
+    insufficient_resourses_response_packet[8] = lo(checksum); // Checksum low byte
+    insufficient_resourses_response_packet[9] = hi(checksum); // Checksum high byte
+
+    return insufficient_resourses_response_packet;
+}
+
 /*********************************************************************/ 
 /*! 
-Get information about the connected gripping module
-(page 41 of WSG command set reference manual v4.0.x)
+Command 0x07
+Announce the disconnection of the current interface.
+Any finger movement that is executed when the disconnect announcement
+arrives is aborted immediately. By sending this command before
+closing the connection, the gripper will not enter FAST STOP on disconnect. 
+(page 14 of WSG command set reference manual v4.0.x)
 
-@param *file Handle of an open file to which the message should be sent 
-@param *msg Pointer to the message that should be sent 
+@param *request Pointer to request structure
 
-@return E_SUCCESS, if successful, otherwise error code 
+@return response structure
 */ 
 /*********************************************************************/ 
-TRESPONSE get_system_information(uint8_t* request_payload, uint16_t request_payload_size) {
+TRESPONSE disconnect_announcement(TREQUEST* request) {
+    // E_NOT_AVAILABLE is not implemented
+    // as TCP/IP interface is supposed to be used
+
+    // Response
+
+    TRESPONSE response;
+
+    response.command_id = DisconnectAnnouncement;
+    response.size_of_payload = 0;
+
+    if (request->size_of_payload != 0) {
+        response.status_code = E_NO_PARAM_EXPECTED;
+        response.status = "E_NO_PARAM_EXPECTED";
+    } else {
+        response.status_code = E_SUCCESS;
+        response.status = "E_SUCCESS";
+    }
+
+    return response;
+}
+
+/*********************************************************************/ 
+/*! 
+Command 0x20
+Execute a homing sequence to reference the gripper fingers.
+(page 15-16 of WSG command set reference manual v4.0.x)
+
+@param *request Pointer to request structure
+
+@return response structure
+*/ 
+/*********************************************************************/ 
+TRESPONSE homing(TREQUEST* request) {
+    
+    // Request
+
+    /** Homing direction
+     * 0 - use default value from system configuration
+     * 1 - homing in positive movement direction (external)
+     * 2 - homing in negative movement direction (internal)
+     **/
+    uint8_t dir;
+    if (request->size_of_payload == 1) {
+        dir = request->payload[0];
+    }
+
+    // Response
+
+    TRESPONSE response;
+
+    response.command_id = Homing;
+    response.size_of_payload = 0;
+
+    if (SF_FAST_STOP) {
+        response.status_code = E_ACCESS_DENIED;
+        response.status = "E_ACCESS_DENIED";
+    } else if (SF_MOVING) {
+        response.status_code = E_ALREADY_RUNNING;
+        response.status = "E_ALREADY_RUNNING";
+    } else if (request->size_of_payload != 1) {
+        response.status_code = E_CMD_FORMAT_ERROR;
+        response.status = "E_CMD_FORMAT_ERROR";
+    } else if (dir != 0x00 && dir != 0x01 && dir != 0x02) {
+        response.status_code = E_INVALID_PARAMETER;
+        response.status = "E_INVALID_PARAMETER";
+    } else {
+        response.status_code = E_CMD_PENDING;
+        response.status = "E_CMD_PENDING";
+    }
+
+    return response;
+}
+
+/*********************************************************************/ 
+/*! 
+Command 0x50
+Get information about the connected gripping module.
+(page 41 of WSG command set reference manual v4.0.x)
+
+@param *request Pointer to request structure
+
+@return response structure
+*/ 
+/*********************************************************************/ 
+TRESPONSE get_system_information(TREQUEST* request) {
+
     // Data
+    
     uint8_t  TYPE       = SYSTEM_TYPE;
     uint8_t  HWREV      = HARDWARE_RIVISION;
     uint16_t FW_VERSION =
         FIRMWARE_VERSION_MAJOR << 12 |
         FIRMWARE_VERSION_MINOR << 8  |
-        FIRMWARE_VERSION_PATH  << 4  | 0b000;
+        FIRMWARE_VERSION_PATH  << 4  | 0b0000;
     uint32_t SN         = SERIAL_NUMBER;
     
     // Response
+
     TRESPONSE response;
 
+    response.command_id = GetSystemInformation;
     response.size_of_payload = 8;
     response.payload = (uint8_t *)malloc(response.size_of_payload);
 
     if (!response.payload) {
         response.size_of_payload = 0;
         response.status_code = E_INSUFFICIENT_RESOURCES;
+        response.status = "E_INSUFFICIENT_RESOURCES";
         return response;
     }
 
@@ -460,11 +470,118 @@ TRESPONSE get_system_information(uint8_t* request_payload, uint16_t request_payl
     response.payload[6] = SN >> 8;
     response.payload[7] = SN;
 
-    if (request_payload_size != 0) {
+    if (request->size_of_payload != 0) {
         response.status_code = E_NO_PARAM_EXPECTED;
+        response.status = "E_NO_PARAM_EXPECTED";
     } else {
         response.status_code = E_SUCCESS;
+        response.status = "E_SUCCESS";
     }
+
+    return response;
+}
+
+/*********************************************************************/ 
+/*! 
+Command 0xB0
+Custom command defined in Lua script (`cmd_mesure_speed_pos.lua`)
+
+@param *request Pointer to request structure
+
+@return response structure
+*/ 
+/*********************************************************************/ 
+TRESPONSE measure(TREQUEST* request) {
+
+    // Data
+    
+    uint32_t gripper_state =
+        SF_SCRIPT_FAILURE     << 20 |
+        SF_SCRIPT_RUNNING     << 19 |
+        SF_CMD_FAILURE        << 18 |
+        SF_FINGER_FAULT       << 17 |
+        SF_CURR_FAULT         << 16 |
+        SF_POWER_FAULT        << 15 |
+        SF_TEMP_FAULT         << 14 |
+        SF_TEMP_WARNING       << 13 |
+        SF_FAST_STOP          << 12 |
+        SF_FORCECNTL_MODE     << 9  |
+        SF_OVERDRIVE_MODE     << 8  |
+        SF_TARGET_POS_REACHED << 7  |
+        SF_AXIS_STOPPED       << 6  |
+        SF_SOFT_LIMIT_PLUS    << 5  |
+        SF_SOFT_LIMIT_MINUS   << 4  |
+        SF_BLOCKED_PLUS       << 3  |
+        SF_BLOCKED_MINUS      << 2  |
+        SF_MOVING             << 1  |
+        SF_REFERENCED         << 0;
+
+    bool mc_busy = SF_MOVING ? true : false;
+    bool mc_blocked = (SF_BLOCKED_MINUS || SF_BLOCKED_PLUS) ? true : false;
+
+    // float tmp;
+    //   unsigned int src = 0;
+    // src = b[3] * 16777216 + b[2] * 65536 + b[1] * 256 + b[0];
+
+    // memcpy(&tmp, &src, sizeof tmp);
+
+    uint32_t mc_position =
+        request->payload[1] << 24 | request->payload[2] << 16 |
+        request->payload[3] << 8  | request->payload[4];
+
+    uint32_t mc_speed =
+        request->payload[5] << 24 | request->payload[6] << 16 |
+        request->payload[7] << 8  | request->payload[8];
+
+    uint32_t mc_force_motor   = 0x00000000;
+    uint32_t mc_force_finger0 = 0x00000000;
+    uint32_t mc_force_finger1 = 0x00000000;
+
+    // Response
+
+    TRESPONSE response;
+
+    response.command_id = Measure;
+    // State (8) + Position (32) + Speed (32) + Force (32) + Force0 (32) + Force1 (32)
+    response.size_of_payload = 8 + 4 * 8 + 4 * 8 + 4 * 8 + 4 * 8 + 4 * 8;
+    response.payload = (uint8_t *)malloc(response.size_of_payload);
+
+    if (!response.payload) {
+        response.size_of_payload = 0;
+        response.status_code = E_INSUFFICIENT_RESOURCES;
+        response.status = "E_INSUFFICIENT_RESOURCES";
+        return response;
+    }
+
+    response.payload[0] = (uint8_t)gripper_state;
+    
+    response.payload[1]  = mc_position;
+    response.payload[2]  = mc_position >> 8;
+    response.payload[3]  = mc_position >> 16;
+    response.payload[4]  = mc_position >> 24;
+
+    response.payload[5]  = mc_speed;
+    response.payload[6]  = mc_speed >> 8;
+    response.payload[7]  = mc_speed >> 16;
+    response.payload[8]  = mc_speed >> 24;
+
+    response.payload[9]  = mc_force_motor;
+    response.payload[10] = mc_force_motor >> 8;
+    response.payload[11] = mc_force_motor >> 16;
+    response.payload[12] = mc_force_motor >> 24;
+
+    response.payload[13] = mc_force_finger0;
+    response.payload[14] = mc_force_finger0 >> 8;
+    response.payload[15] = mc_force_finger0 >> 16;
+    response.payload[16] = mc_force_finger0 >> 24;
+
+    response.payload[17] = mc_force_finger1;
+    response.payload[18] = mc_force_finger1 >> 8;
+    response.payload[19] = mc_force_finger1 >> 16;
+    response.payload[20] = mc_force_finger1 >> 24;
+
+    response.status_code = E_SUCCESS;
+    response.status = "E_SUCCESS";
 
     return response;
 }
