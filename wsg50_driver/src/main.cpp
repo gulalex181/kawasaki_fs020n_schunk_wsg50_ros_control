@@ -81,19 +81,19 @@ void publish_status_and_joint_states(gripper_response info) {
     g_pub_state.publish(status_msg);
 
     // ==== Joint state msg ====
-    sensor_msgs::JointState joint_states;
-    joint_states.header.stamp = ros::Time::now();;
-    joint_states.header.frame_id = "";//"wsg50_gripper_base_link";
-    joint_states.name.push_back("wsg50_finger_left_joint");
-    joint_states.position.resize(1);
+    // sensor_msgs::JointState joint_states;
+    // joint_states.header.stamp = ros::Time::now();;
+    // joint_states.header.frame_id = "";//"wsg50_gripper_base_link";
+    // joint_states.name.push_back("wsg50_finger_left_joint");
+    // joint_states.position.resize(1);
 
-    joint_states.position[0] = info.position/2000.0;
-    joint_states.velocity.resize(1);
-    joint_states.velocity[0] = info.speed/1000.0;
-    joint_states.effort.resize(1);
-    joint_states.effort[0] = info.f_motor;
+    // joint_states.position[0] = info.position/2000.0;
+    // joint_states.velocity.resize(1);
+    // joint_states.velocity[0] = info.speed/1000.0;
+    // joint_states.effort.resize(1);
+    // joint_states.effort[0] = info.f_motor;
 
-    g_pub_joint.publish(joint_states);
+    // g_pub_joint.publish(joint_states);
 }
 
 bool moveSrv(wsg50_common::Move::Request &req, wsg50_common::Move::Response &res)

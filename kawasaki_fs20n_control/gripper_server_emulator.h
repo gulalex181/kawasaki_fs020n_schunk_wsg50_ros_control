@@ -65,20 +65,35 @@ typedef enum {
 } TCommand;
 
 typedef struct {
-    uint8_t preamble[3] = {0xAA, 0xAA, 0xAA};
-    uint8_t command_id;
-    uint16_t size_of_payload;
-    uint8_t *payload;
+    uint8_t      preamble[3] = {0xAA, 0xAA, 0xAA};
+    uint8_t      command_id;
+    uint16_t     size_of_payload;
+    uint8_t*     payload;
 } TREQUEST;
 
 typedef struct {
-    uint8_t preamble[3] = {0xAA, 0xAA, 0xAA};
-    uint8_t command_id;
-    uint16_t size_of_payload;
-    uint16_t status_code;
-    std::string status;
-    uint8_t *payload;
+    uint8_t      preamble[3] = {0xAA, 0xAA, 0xAA};
+    uint8_t      command_id;
+    uint16_t     size_of_payload;
+    uint16_t     status_code;
+    std::string  status;
+    uint8_t*     payload;
 } TRESPONSE;
+
+typedef struct {
+    TRESPONSE*   responses;
+    int*         delays;
+    size_t       sequence_size;
+} ResponseSequenceType;
+
+typedef struct {
+    uint8_t**    packets;
+    uint16_t*    packets_sizes;
+    int*         delays;
+    std::string* packets_statuses;
+    bool*        packets_free_need;
+    size_t       sequence_size;
+} PacketSequenceType;
 
 //! Status codes
 typedef enum {
@@ -131,14 +146,27 @@ typedef enum {
 } NET_DIR;
 
 #define LOG_PREFIX             "GRIPPER EMULATOR SERVER"
+// Network settings
 #define BUFFER_SIZE            1024     //!< buffer size
 #define PORT                   5222     //!< port
+// System information
 #define SYSTEM_TYPE            WSG_50   //!< hardware rivision
 #define HARDWARE_RIVISION      5        //!< hardware rivision
 #define SERIAL_NUMBER          00003713 //!< serial number
 #define FIRMWARE_VERSION_MAJOR 3        //!< firmware major version
 #define FIRMWARE_VERSION_MINOR 0        //!< firmware minor version
 #define FIRMWARE_VERSION_PATH  0        //!< firmware path version
+// Gripper information
+#define OVR_FORCE              80       //!< gripper maximum overdrive grasping force (N)
+#define NOM_FORCE              80       //!< gripper nominal grasping force (N)
+#define MIN_FORCE              5        //!< gripper minimum grasping force (N)
+#define MAX_ACC                5000     //!< gripper maximum acceleration (mm/s^2)
+#define MIN_ACC                100      //!< gripper minimum acceleration (mm/s^2)
+#define MAX_SPEED              420      //!< gripper maximum speed (mm/s)
+#define MIN_SPEED              5        //!< gripper minimum speed (mm/s)
+#define STROKE                 110      //!< gripper stroke (mm)
+// Delays
+#define HOMING_DELAY           1000     //!< homing delay (ms)
 
 const unsigned short CRC_TABLE[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
@@ -179,22 +207,24 @@ const unsigned short CRC_TABLE[256] = {
 #define hi(x)    (unsigned char) ( ((x) >> 8) & 0xff ) // Returns the upper byte of the passed short
 #define lo(x)    (unsigned char) ( (x) & 0xff )        // Returns the lower byte of the passed short
 
-void CtrlC_handler(int sig);
-void print_packet_data(const char* prefix, int count_of_bytes, uint8_t* packet, NET_DIR dir,
+void SIGINT_handler(int sig);
+void print_packet_data(const char* prefix, uint16_t packet_size, uint8_t* packet, NET_DIR dir,
     std::string command, std::string status);
-uint8_t* request_handling(uint8_t* request, uint16_t* response_size,
-    std::string* response_status, std::string* command_name, bool* need_to_free);
+PacketSequenceType request_handling(uint8_t* request, std::string* command_name);
 uint16_t checksum_update_crc16(uint8_t* data, u_int16_t size, uint16_t crc);
 uint8_t* response_packet_build(TRESPONSE *response, uint16_t* size);
 uint8_t* insufficient_resourses_response_packet_build(uint8_t command_id);
 // TStat msg_send(FILE *file, TMESSAGE *msg);
 
 // Built-in commands
-TRESPONSE disconnect_announcement(TREQUEST* request);
-TRESPONSE homing(TREQUEST* request);
-TRESPONSE get_system_information(TREQUEST* request);
+ResponseSequenceType disconnect_announcement(TREQUEST* request);
+ResponseSequenceType homing(TREQUEST* request);
+ResponseSequenceType get_system_information(TREQUEST* request);
+ResponseSequenceType get_system_limits(TREQUEST* request);
 // Custom commands (in Lua script)
-TRESPONSE measure(TREQUEST* request);
+ResponseSequenceType measure(TREQUEST* request);
+ResponseSequenceType position_control(TREQUEST* request);
+ResponseSequenceType speed_control(TREQUEST* request);
 
 uint8_t request[BUFFER_SIZE] = { 0 };
 
@@ -239,3 +269,9 @@ bool SF_FINGER_FAULT       = 0; // Finger fault
 bool SF_CMD_FAILURE        = 0; // Command error (last command returned an error)
 bool SF_SCRIPT_RUNNING     = 0; // A script is currently running
 bool SF_SCRIPT_FAILURE     = 0; // Script error
+
+float gripper_current_position      = 0;
+float gripper_current_speed         = 0;
+float gripper_current_force_motor   = 0;
+float gripper_current_force_finger0 = 0;
+float gripper_current_force_finger1 = 0;
