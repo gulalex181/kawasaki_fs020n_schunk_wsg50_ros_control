@@ -18,8 +18,12 @@
 #include <ros_control_boilerplate/generic_hw_interface.h>
 #include <rosparam_shortcuts/rosparam_shortcuts.h>
 
+#include "wsg50_common/Status.h"
+#include "wsg50_common/Cmd.h"
+
 #define DEG_TO_RAD 0.01745329251
 #define RAD_TO_DEG 57.2957795131
+#define LOG_PREFIX "KawasakiHWInterface"
 
 namespace kawasaki_ns {
 
@@ -50,20 +54,31 @@ public:
     virtual void enforceLimits(ros::Duration& period);
 
     void disconnectFromRobot();
+    void disconnectFromGripper();
 
 protected:
     int socket_fd = 0;
     struct sockaddr_in serv_addr;
     char buffer[100] = {0};
+
+    int gripper_socket_fd = 0;
+    struct sockaddr_in gripper_serv_addr;
+    char gripper_buffer[100] = {0};
+
     bool output_to_console;
     std::size_t joints_number;
 
     std::vector<double> joint_position_last = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     void connectToRobot();
-    void connectionError(std::string msg);
     void sendCmdToRobot(std::string cmd, bool is_disconnect = false);
     void receiveAnsFromRobot();
+
+    void connectToGripper();
+    void sendCmdToGripper();
+    void receiveAnsFromGripper(const wsg50_common::Status::ConstPtr& msg);
+
+    void connectionError(std::string msg);
 
     std::string getStartMovementProgramCmd();
     std::string getStopMovementProgramCmd();

@@ -1,4 +1,5 @@
 #include <kawasaki_fs20n_control/kawasaki_fs20n_hw_interface.h>
+// #include <kawasaki_fs20n_control/schunk_wsg50_hw_interface.h>
 
 namespace kawasaki_ns {
 
@@ -10,6 +11,7 @@ KawasakiHWInterface::KawasakiHWInterface(ros::NodeHandle& nh, urdf::Model* urdf_
 
 KawasakiHWInterface::~KawasakiHWInterface() {
     disconnectFromRobot();
+    disconnectFromGripper();
 }
 
 void KawasakiHWInterface::init() {
@@ -21,9 +23,14 @@ void KawasakiHWInterface::init() {
     error += !rosparam_shortcuts::get(name_, rpnh, "robot_joints_number", joints_number);
     rosparam_shortcuts::shutdownIfError(name_, error);
 
-    ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "ready");
+    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "ready");
 
     connectToRobot();
+    connectToGripper();
+
+    ros::Subscriber gripper_subscriber = nh_.subscribe("/wsg50_driver/status", 5,
+        &KawasakiHWInterface::receiveAnsFromGripper, this);
+    ros::Publisher gripper_publisher = nh_.advertise<wsg50_common::Cmd>("/wsg50_driver/goal_position", 1000);
 }
 
 void KawasakiHWInterface::read(ros::Duration& elapsed_time) {
@@ -35,22 +42,23 @@ void KawasakiHWInterface::read(ros::Duration& elapsed_time) {
 
     joint_position_[num_joints_ - 1] = joint_position_command_[num_joints_ - 1];
     joint_position_[num_joints_] = joint_position_command_[num_joints_];
-    // ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << pos);
+    // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << pos);
 }
 
 void KawasakiHWInterface::write(ros::Duration& elapsed_time) {
     // Safety
     //enforceLimits(elapsed_time);
 
-    // ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "WRITE TO ROBOT");
+    // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "WRITE TO ROBOT");
     std::string pos = "";
     for (int i = 0; i < num_joints_; ++i) {
         // joint_position_[i] = joint_position_command_[i];
         pos += i + ": '" + std::to_string(joint_position_[i]) + "' ";
     }
-    // ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << pos);
+    // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << pos);
 
     sendCmdToRobot(getGoToPoseCmd());
+    // sendCmdToGripper();
 }
 
 void KawasakiHWInterface::enforceLimits(ros::Duration& period) {
@@ -88,31 +96,31 @@ void KawasakiHWInterface::connectToRobot() {
         connectionError("connecting error");
     }
 
-    ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "connected to server");
+    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "connected to server");
 
     // Launch robot movement program.
     sendCmdToRobot(getStartMovementProgramCmd());
 
-    ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "robot movement program is launched");
+    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "robot movement program is launched");
 }
 
 void KawasakiHWInterface::connectionError(std::string msg) {
-    ROS_ERROR_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << msg);
+    ROS_ERROR_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << msg);
     ros::shutdown();
     exit(0);
 }
 
 void KawasakiHWInterface::disconnectFromRobot() {
     sendCmdToRobot(getStopMovementAndCloseConnectionCmd(), true);
-    ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "robot movement program is stopped");
+    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "robot movement program is stopped");
     
     int close_result = close(socket_fd);
-    ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "disconnected from server with code: " << close_result);
+    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "disconnected from robot server with code: " << close_result);
 }
 
 void KawasakiHWInterface::sendCmdToRobot(std::string cmd, bool is_disconnect) {
     if (output_to_console) {
-        ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "COMMAND TO ROBOT: '" << cmd << "'");
+        ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "COMMAND TO ROBOT: '" << cmd << "'");
     }
     
     if (::write(socket_fd, cmd.c_str(), cmd.length()) < 0) {
@@ -132,7 +140,7 @@ void KawasakiHWInterface::receiveAnsFromRobot() {
     int count_of_bytes = ::read(socket_fd, buffer, sizeof(buffer) - 1);
     
     if (output_to_console) {
-        ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "buffer: '" << buffer << "'" << std::endl);
+        ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "buffer: '" << buffer << "'" << std::endl);
     }
     
     if (count_of_bytes < 0) {
@@ -146,7 +154,7 @@ void KawasakiHWInterface::receiveAnsFromRobot() {
 
 
     if (output_to_console) {
-        ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "STATUS OF ROBOT:" << std::endl
+        ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "STATUS OF ROBOT:" << std::endl
             << "VERSION: " << responseVector[0] << std::endl
             << "ERROR: " << responseVector[1] << std::endl
             << "SWITCH(RUN): " << responseVector[2] << std::endl
@@ -225,13 +233,13 @@ std::vector<std::string> KawasakiHWInterface::splitStringToVector(const std::str
     // }
 
     if (output_to_console) {
-        ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "string1: '" << str << "'" << std::endl);
+        ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "string1: '" << str << "'" << std::endl);
     }
     
     std::string s = std::regex_replace(str, std::regex("^\\s+|\\s+$"), "");
 
     if (output_to_console) {
-        ROS_INFO_STREAM_NAMED(name_, "[KawasakiHWInterface]: " << "string2: '" << s << "'" << std::endl);
+        ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "string2: '" << s << "'" << std::endl);
     }
 
     std::regex ws_re("\\s+"); // whitespace
@@ -240,6 +248,77 @@ std::vector<std::string> KawasakiHWInterface::splitStringToVector(const std::str
     };
 
     return elems;
+}
+
+void KawasakiHWInterface::connectToGripper() {
+    // Create client socket
+    gripper_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (gripper_socket_fd < 0) {
+        connectionError("creating socket error");
+    }
+
+    // Get connection params from parameter server
+    std::string ip;
+    int port;
+
+    ros::param::get("/wsg50_driver/ip", ip);
+    ros::param::get("/wsg50_driver/port", port);
+
+    // Configure robot server address structure
+    gripper_serv_addr.sin_addr.s_addr = inet_addr(ip.c_str());
+    gripper_serv_addr.sin_family = AF_INET;
+    gripper_serv_addr.sin_port = htons(port);
+
+    // Connecting to robot server
+    if (connect(gripper_socket_fd, (struct sockaddr *) &gripper_serv_addr, sizeof(gripper_serv_addr)) < 0) {
+        connectionError("connecting error");
+    }
+
+    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: "
+        << "connected to gripper server with IP: " << ip << " and port: " << port);
+}
+
+void KawasakiHWInterface::disconnectFromGripper() {
+    int close_result = close(gripper_socket_fd);
+    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "disconnected from gripper server with code: " << close_result);
+}
+
+void KawasakiHWInterface::receiveAnsFromGripper(const wsg50_common::Status::ConstPtr& msg) {
+    std::string gripper_current_status        = msg->status;
+    float       gripper_current_width         = msg->width;
+    float       gripper_current_speed         = msg->speed;
+    float       gripper_current_acc           = msg->acc;
+    float       gripper_current_force         = msg->force;
+    float       gripper_current_force_finger0 = msg->force_finger0;
+    float       gripper_current_force_finger1 = msg->force_finger1;
+
+    // if (output_to_console) {
+        ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "STATUS OF GRIPPER:" << std::endl
+            << "------------------------------------------------" << std::endl
+            << "STATUS: "        << gripper_current_status        << std::endl
+            << "WIDTH: "         << gripper_current_width         << std::endl
+            << "SPEED: "         << gripper_current_speed         << std::endl
+            << "ACC: "           << gripper_current_acc           << std::endl
+            << "FORCE: "         << gripper_current_force         << std::endl
+            << "FORCE_FINGER0: " << gripper_current_force_finger0 << std::endl
+            << "FORCE_FINGER1: " << gripper_current_force_finger1 << std::endl
+            << "------------------------------------------------" << std::endl
+        );
+    // }
+}
+
+void KawasakiHWInterface::sendCmdToGripper() {
+    // wsg50_common::Status gripper_status;
+    // gripper_status.status = info.state_text;
+    // gripper_status.width = info.position;
+    // gripper_status.speed = info.speed;
+    // gripper_status.acc = info.acceleration;
+    // gripper_status.force = info.f_motor;
+    // gripper_status.force_finger0 = info.f_finger0;
+    // gripper_status.force_finger1 = info.f_finger1;
+
+    // g_pub_state.publish(status_msg);
 }
 
 } // namespace ros_control_boilerplate

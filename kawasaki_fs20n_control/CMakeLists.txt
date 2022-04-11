@@ -34,6 +34,7 @@ find_package(catkin REQUIRED COMPONENTS
     tf2_eigen
     tf2_geometry_msgs
     # end
+    wsg50_common # for gripper messages
 )
 
 # for https://github.com/ros-planning/moveit_tutorials/tree/master/doc/move_group_interface

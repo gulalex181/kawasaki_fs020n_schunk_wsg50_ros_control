@@ -78,4 +78,5 @@
     <!-- Run schunk wsg50 driver -->
     <node name="wsg50_driver"  pkg="wsg50_driver" type="wsg50" output="screen" />
 
+    <!-- <remap from="/kawasaki_fs020n_hw_interface/wsg50_driver/status" to="/wsg50_driver/status" /> -->
 </launch>
