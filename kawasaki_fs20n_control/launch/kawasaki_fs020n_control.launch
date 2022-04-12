@@ -1,5 +1,9 @@
 <launch>
 
+    <!-- <node pkg="aliencontrol" type="aliencontrol" name="aliencontrol_top">
+        <param name="cmd" value="'$(find kawasaki_fs20n_control)/gripper_server_emulator'" />
+    </node> -->
+
     <!-- Load the URDF to the parameter server -->
     <param
         name="robot_description"
@@ -78,5 +82,4 @@
     <!-- Run schunk wsg50 driver -->
     <node name="wsg50_driver"  pkg="wsg50_driver" type="wsg50" output="screen" />
 
-    <!-- <remap from="/kawasaki_fs020n_hw_interface/wsg50_driver/status" to="/wsg50_driver/status" /> -->
 </launch>

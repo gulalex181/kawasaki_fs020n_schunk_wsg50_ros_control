@@ -28,9 +28,9 @@ void KawasakiHWInterface::init() {
     connectToRobot();
     connectToGripper();
 
-    ros::Subscriber gripper_subscriber = nh_.subscribe("/wsg50_driver/status", 5,
+    gripper_subscriber = nh_.subscribe("/wsg50_driver/status", 5,
         &KawasakiHWInterface::receiveAnsFromGripper, this);
-    ros::Publisher gripper_publisher = nh_.advertise<wsg50_common::Cmd>("/wsg50_driver/goal_position", 1000);
+    gripper_publisher = nh_.advertise<wsg50_common::Cmd>("/wsg50_driver/goal_position", 1000);
 }
 
 void KawasakiHWInterface::read(ros::Duration& elapsed_time) {
@@ -40,8 +40,8 @@ void KawasakiHWInterface::read(ros::Duration& elapsed_time) {
     //     pos += i + ": '" + std::to_string(joint_position_[i]) + "' ";
     }
 
-    joint_position_[num_joints_ - 1] = joint_position_command_[num_joints_ - 1];
-    joint_position_[num_joints_] = joint_position_command_[num_joints_];
+    // joint_position_[num_joints_ - 1] = joint_position_command_[num_joints_ - 1];
+    // joint_position_[num_joints_] = joint_position_command_[num_joints_];
     // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << pos);
 }
 
@@ -58,7 +58,7 @@ void KawasakiHWInterface::write(ros::Duration& elapsed_time) {
     // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << pos);
 
     sendCmdToRobot(getGoToPoseCmd());
-    // sendCmdToGripper();
+    sendCmdToGripper();
 }
 
 void KawasakiHWInterface::enforceLimits(ros::Duration& period) {
@@ -293,7 +293,7 @@ void KawasakiHWInterface::receiveAnsFromGripper(const wsg50_common::Status::Cons
     float       gripper_current_force_finger0 = msg->force_finger0;
     float       gripper_current_force_finger1 = msg->force_finger1;
 
-    // if (output_to_console) {
+    if (output_to_console) {
         ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "STATUS OF GRIPPER:" << std::endl
             << "------------------------------------------------" << std::endl
             << "STATUS: "        << gripper_current_status        << std::endl
@@ -305,20 +305,28 @@ void KawasakiHWInterface::receiveAnsFromGripper(const wsg50_common::Status::Cons
             << "FORCE_FINGER1: " << gripper_current_force_finger1 << std::endl
             << "------------------------------------------------" << std::endl
         );
-    // }
+    }
+
+    // Get current positon of both fingers
+    float finger_current_position = gripper_current_width / 2; // mm
+
+    // Conversion (5 mm - 55 mm) to (0 rad 2pi rad) [the same as in the urdf file for gripper]
+    finger_current_position = (finger_current_position - offset) / multiplier; // rad
+
+    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "finger position: " << finger_current_position << std::endl);
+
+    joint_position_[num_joints_ - 1] = finger_current_position;
 }
 
 void KawasakiHWInterface::sendCmdToGripper() {
-    // wsg50_common::Status gripper_status;
-    // gripper_status.status = info.state_text;
-    // gripper_status.width = info.position;
-    // gripper_status.speed = info.speed;
-    // gripper_status.acc = info.acceleration;
-    // gripper_status.force = info.f_motor;
-    // gripper_status.force_finger0 = info.f_finger0;
-    // gripper_status.force_finger1 = info.f_finger1;
 
-    // g_pub_state.publish(status_msg);
+    // Conversion (0 rad 2pi rad) to (5 mm - 55 mm) [the same as in the urdf file for gripper]
+    float finger_cmd_position = joint_position_command_[num_joints_ - 1] * multiplier + offset; // mm
+
+    wsg50_common::Cmd gripper_cmd;
+    gripper_cmd.pos = finger_cmd_position * 2;
+
+    gripper_publisher.publish(gripper_cmd);
 }
 
 } // namespace ros_control_boilerplate

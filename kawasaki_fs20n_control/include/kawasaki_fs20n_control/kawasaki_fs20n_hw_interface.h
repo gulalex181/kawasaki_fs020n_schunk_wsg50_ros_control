@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vector>
 #include <regex>
+#include <math.h>
 
 #include <ros/ros.h>
 #include <ros_control_boilerplate/generic_hw_interface.h>
@@ -69,6 +70,16 @@ protected:
     std::size_t joints_number;
 
     std::vector<double> joint_position_last = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+    float palm_revolute_upper = 2 * M_PI;                                         // rad
+    float palm_revolute_lower = 0;                                                // rad
+    float palm_joint_gripper_upper = 55;                                          // mm
+    float palm_joint_gripper_lower = 5;                                           // mm
+    float offset = palm_joint_gripper_lower;                                      // mm
+    float multiplier = (palm_joint_gripper_upper - offset) / palm_revolute_upper;
+
+    ros::Subscriber gripper_subscriber;
+    ros::Publisher gripper_publisher;
 
     void connectToRobot();
     void sendCmdToRobot(std::string cmd, bool is_disconnect = false);
