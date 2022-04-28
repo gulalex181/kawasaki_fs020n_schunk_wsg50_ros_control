@@ -182,7 +182,8 @@
         <limit effort="1000.0" lower="-6.2832" upper="6.2832" velocity="0.5"/>
         <parent link="link_5"/>
         <child link="link_6"/>
-        <origin xyz="0.0525 0 0" rpy="3.1415926 -1.570796 0" />
+        <!-- <origin xyz="0.0525 0 0" rpy="3.1415926 -1.570796 0" /> -->
+        <origin xyz="0.0965 0 0" rpy="3.1415926 -1.570796 0" />
         <axis xyz="0 0 1" />
     </joint>
 </xacro:macro>

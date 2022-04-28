@@ -69,7 +69,8 @@ protected:
     bool output_to_console;
     std::size_t joints_number;
 
-    std::vector<double> joint_position_last = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    std::vector<double> joint_position_last = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    std::vector<double> joint_cmd_last = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     float palm_revolute_upper = 2 * M_PI;                                         // rad
     float palm_revolute_lower = 0;                                                // rad

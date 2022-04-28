@@ -30,12 +30,12 @@ void KawasakiHWInterface::init() {
 
     gripper_subscriber = nh_.subscribe("/wsg50_driver/status", 5,
         &KawasakiHWInterface::receiveAnsFromGripper, this);
-    gripper_publisher = nh_.advertise<wsg50_common::Cmd>("/wsg50_driver/goal_position", 1000);
+    gripper_publisher = nh_.advertise<wsg50_common::Cmd>("/wsg50_driver/goal_position", 1000, true);
 }
 
 void KawasakiHWInterface::read(ros::Duration& elapsed_time) {
     // std::string pos = "";
-    for (int i = 0; i < joints_number; ++i) {
+    for (int i = 0; i <= joints_number; ++i) {
         joint_position_[i] = joint_position_last[i];
     //     pos += i + ": '" + std::to_string(joint_position_[i]) + "' ";
     }
@@ -303,6 +303,7 @@ void KawasakiHWInterface::receiveAnsFromGripper(const wsg50_common::Status::Cons
             << "FORCE: "         << gripper_current_force         << std::endl
             << "FORCE_FINGER0: " << gripper_current_force_finger0 << std::endl
             << "FORCE_FINGER1: " << gripper_current_force_finger1 << std::endl
+            << "joint_position_command_: " << joint_position_command_[num_joints_ - 1] << std::endl
             << "------------------------------------------------" << std::endl
         );
     }
@@ -313,18 +314,31 @@ void KawasakiHWInterface::receiveAnsFromGripper(const wsg50_common::Status::Cons
     // Conversion (5 mm - 55 mm) to (0 rad 2pi rad) [the same as in the urdf file for gripper]
     finger_current_position = (finger_current_position - offset) / multiplier; // rad
 
-    ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "finger position: " << finger_current_position << std::endl);
+    // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "finger position: " << finger_current_position << std::endl);
 
-    joint_position_[num_joints_ - 1] = finger_current_position;
+    joint_position_last[num_joints_ - 1] = finger_current_position;
+    // joint_position_[num_joints_ - 1] = finger_current_position;
 }
 
 void KawasakiHWInterface::sendCmdToGripper() {
+
+    // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "cmd: " << joint_position_command_[num_joints_ - 1] << std::endl);
+    // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "last: " << joint_cmd_last[num_joints_ - 1] << std::endl);
+    // ROS_INFO_STREAM_NAMED(name_, "[" << LOG_PREFIX << "]: " << "==: " << (joint_position_command_[num_joints_ - 1] == joint_position_last[num_joints_ - 1]) << std::endl);
+
+    if (joint_position_command_[num_joints_ - 1] == joint_cmd_last[num_joints_ - 1]) {
+        return;
+    }
+
+    // Save last command value
+    joint_cmd_last[num_joints_ - 1] = joint_position_command_[num_joints_ - 1];
 
     // Conversion (0 rad 2pi rad) to (5 mm - 55 mm) [the same as in the urdf file for gripper]
     float finger_cmd_position = joint_position_command_[num_joints_ - 1] * multiplier + offset; // mm
 
     wsg50_common::Cmd gripper_cmd;
     gripper_cmd.pos = finger_cmd_position * 2;
+    gripper_cmd.speed = 200;
 
     gripper_publisher.publish(gripper_cmd);
 }

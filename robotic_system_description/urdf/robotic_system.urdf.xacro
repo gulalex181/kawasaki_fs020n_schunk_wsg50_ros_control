@@ -1,11 +1,26 @@
 <?xml version="1.0" ?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="robotic_system">
 
+    <xacro:include filename="$(find robotic_system_description)/urdf/table.urdf.xacro" />
     <xacro:include filename="$(find robotic_system_description)/urdf/fts.urdf.xacro" />
     <xacro:include filename="$(find robotic_system_description)/urdf/gripper_adapter.urdf.xacro" />
     <xacro:include filename="$(find robotic_system_description)/urdf/kawasaki_fs020n_manipulator.urdf.xacro" />
     <xacro:include filename="$(find robotic_system_description)/urdf/schunk_wsg_50.urdf.xacro" />
-    <xacro:include filename="$(find robotic_system_description)/urdf/zed.urdf.xacro" />
+    
+    <!-- ZED camera [block start] -->
+    <!-- <xacro:include filename="$(find robotic_system_description)/urdf/zed.urdf.xacro" /> -->
+    <xacro:arg name="camera_name"   default="zed" />
+    <xacro:arg name="camera_model"  default="zed" />
+    <xacro:arg name="base_frame"    default="base_link" />
+    <xacro:arg name="cam_pos_x"     default="0.0" />
+    <xacro:arg name="cam_pos_y"     default="0.0" />
+    <xacro:arg name="cam_pos_z"     default="0.0" />
+    <xacro:arg name="cam_roll"      default="0.0" />
+    <xacro:arg name="cam_pitch"     default="0.0" />
+    <xacro:arg name="cam_yaw"       default="0.0" />
+
+    <xacro:include filename="$(find zed_wrapper)/urdf/zed_macro.urdf.xacro" />
+    <!-- ZED camera [block end] -->
 
     <material name="orange_color">
         <color rgba="1 0.6 0.3 1"/>
@@ -29,12 +44,16 @@
 
     <link name="robotic_system"/>
          
+    <xacro:table parent="robotic_system">
+        <origin xyz="0 2 0.4" rpy="0 0 0" />
+    </xacro:table>
+         
     <xacro:kawasaki_fs020n_manipulator parent="robotic_system">
         <origin xyz="0 0 0" rpy="0 0 0" />
     </xacro:kawasaki_fs020n_manipulator>
 
     <xacro:fts parent="link_6">
-        <origin xyz="0 0 0.045" rpy="0 0 0" />
+        <origin xyz="0 0 0.02" rpy="0 0 0" />
     </xacro:fts>
 
     <xacro:gripper_adapter parent="fts_frame">
@@ -45,8 +64,16 @@
         <origin xyz="0 0 0" rpy="0 0 0" />
     </xacro:schunk_wsg_50>
 
-    <xacro:zed parent="gripper_adapter_link">
+    <!-- ZED camera [block start] -->
+    <!-- <xacro:zed parent="gripper_adapter_link">
         <origin xyz="-0.06 0.06 0.087" rpy="1.57 -1.57 0" />
-    </xacro:zed>
+    </xacro:zed> -->
+        
+    <!-- <xacro:zed_camera name="$(arg camera_name)" model="$(arg camera_model)" parent="$(arg base_frame)"> -->
+    <xacro:zed_camera name="zed" model="zed" parent="palm_link">
+        <origin xyz="0 0.06 0.05" rpy="1.57 -1.57 0" />
+        <!-- <origin xyz="$(arg cam_pos_x) $(arg cam_pos_y) $(arg cam_pos_z)" rpy="$(arg cam_roll) $(arg cam_pitch) $(arg cam_yaw)" /> -->
+    </xacro:zed_camera>
+    <!-- ZED camera [block end] -->
 
 </robot>

@@ -1,6 +1,6 @@
 kawasaki_fs020n_hw_interface:
     robot_ip: "127.0.0.1"       # for test with robot emulator
-    #robot_ip: "192.168.5.250"  # ROBOT L
+    # robot_ip: "192.168.5.250"  # ROBOT L
     # robot_ip: "192.168.5.242" # ROBOT R
     robot_port: 5555            # for test with robot emulator
     # robot_port: 10050         # for real robot
@@ -18,7 +18,7 @@ kawasaki_fs020n_moveit_control:
     # orientation_format: "quaternion"
     rpy_format: "deg"
     # rpy_format: "rad"
-    goal_position_x: -0.5
+    goal_position_x: 0.5
     goal_position_y: 1.0
     goal_position_z: 2.0
     # Use these params if you use Quaternion for orientation

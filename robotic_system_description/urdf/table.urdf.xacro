@@ -1,23 +1,20 @@
 <?xml version="1.0" ?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="table">
 
-    <link name="world"/>
-
-    <link name="table">
+<xacro:macro name="table" params="parent *origin">
+    <link name="table_link">
         <inertial>
             <origin xyz="0 0 0.125"/>
             <mass value="5" />
             <inertia  ixx="0.0001" ixy="0.0"  ixz="0.0"  iyy="0.0001"  iyz="0.0"  izz="0.0001" />
         </inertial>
         <visual>
-            <origin xyz="0 0.5 0.1"/>
             <geometry>
                 <box size="1 2 0.8"/>
             </geometry>
             <material name="blue" />
         </visual>
         <collision>
-            <origin xyz="0 0.5 0.1"/>
             <geometry>
                 <box size="1 2 0.8"/>
             </geometry>
@@ -25,9 +22,10 @@
     </link>
 
     <joint name="table_joint" type="fixed">
-        <parent link="world"/>
-        <child link="table"/>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="${parent}"/>
+        <child link="table_link"/>
+        <xacro:insert_block name="origin" />
     </joint>
+</xacro:macro>
 
 </robot>

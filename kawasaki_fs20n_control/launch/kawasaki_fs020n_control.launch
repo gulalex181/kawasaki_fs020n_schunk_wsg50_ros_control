@@ -1,5 +1,26 @@
 <launch>
 
+    <!-- Params for ZED camera -->
+    <!-- <arg name="svo_file" default="path/to/svo/file.svo"> -->
+    <arg name="svo_file"             default="" />
+    <!-- <arg name="stream" default="<ip_address>:<port>"> -->
+    <arg name="stream"               default="94.231.166.193:30000" />
+    <arg name="camera_model"         default="zed" />
+    <arg name="node_name"            default="zed_node" />
+    <arg name="publish_urdf"         default="false" />
+    <arg name="camera_name"          default="zed" />
+    <arg name="base_frame"           default="palm_link" />
+
+    <!-- Position respect to base frame -->
+    <arg name="cam_pos_x"            default="0.0" />
+    <arg name="cam_pos_y"            default="0.06" />
+    <arg name="cam_pos_z"            default="0.05" />
+    <arg name="cam_roll"             default="1.57" />
+    <arg name="cam_pitch"            default="-1.57" />
+    <arg name="cam_yaw"              default="0.0" />
+
+
+    <!-- Run gripper emulator -->
     <!-- <node pkg="aliencontrol" type="aliencontrol" name="aliencontrol_top">
         <param name="cmd" value="'$(find kawasaki_fs20n_control)/gripper_server_emulator'" />
     </node> -->
@@ -7,7 +28,16 @@
     <!-- Load the URDF to the parameter server -->
     <param
         name="robot_description"
-        command="$(find xacro)/xacro '$(find robotic_system_description)/urdf/robotic_system.urdf.xacro'"
+        command="$(find xacro)/xacro '$(find robotic_system_description)/urdf/robotic_system.urdf.xacro'
+                camera_name:=$(arg camera_name)
+                camera_model:=$(arg camera_model)
+                base_frame:=$(arg base_frame)
+                cam_pos_x:=$(arg cam_pos_x)
+                cam_pos_y:=$(arg cam_pos_y)
+                cam_pos_z:=$(arg cam_pos_z)
+                cam_roll:=$(arg cam_roll)
+                cam_pitch:=$(arg cam_pitch)
+                cam_yaw:=$(arg cam_yaw)"
     />
 
     <!-- Launch RViz -->
@@ -17,6 +47,12 @@
         name="rviz"
         args="-d $(find kawasaki_fs20n_control)/config/rviz_config.rviz"
     />
+    <!-- <node
+        pkg="rviz"
+        type="rviz"
+        name="rviz"
+        args="-d $(find kawasaki_fs20n_control)/config/rviz_config_with_camera.rviz"
+    /> -->
 
     <!-- Load controller settings to the parameter server -->
     <rosparam
@@ -81,5 +117,22 @@
 
     <!-- Run schunk wsg50 driver -->
     <node name="wsg50_driver"  pkg="wsg50_driver" type="wsg50" output="screen" />
+
+    <!-- Run ZED camera -->
+    <!-- <include file="$(find zed_wrapper)/launch/$(arg camera_model).launch">
+        <arg name="svo_file"            value="$(arg svo_file)" />
+        <arg name="stream"              value="$(arg stream)" />
+        <arg name="camera_model"        value="$(arg camera_model)" />
+        <arg name="node_name"           value="$(arg node_name)" />
+        <arg name="publish_urdf"        value="$(arg publish_urdf)" />
+        <arg name="camera_name"         value="$(arg camera_name)" />
+        <arg name="base_frame"          value="$(arg base_frame)" />
+        <arg name="cam_pos_x"           value="$(arg cam_pos_x)" />
+        <arg name="cam_pos_y"           value="$(arg cam_pos_y)" />
+        <arg name="cam_pos_z"           value="$(arg cam_pos_z)" />
+        <arg name="cam_roll"            value="$(arg cam_roll)" />
+        <arg name="cam_pitch"           value="$(arg cam_pitch)" />
+        <arg name="cam_yaw"             value="$(arg cam_yaw)" />
+    </include> -->
 
 </launch>
